@@ -1,0 +1,3 @@
+= Camel 2.x and 3.x upgrade
+
+This page is written in a following documentation pull request.

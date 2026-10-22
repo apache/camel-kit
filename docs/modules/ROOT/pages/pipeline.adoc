@@ -1,0 +1,3 @@
+= Pipeline: stages, approval gate and Iron Laws
+
+This page is written in a following documentation pull request.
