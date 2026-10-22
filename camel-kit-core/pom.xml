@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.github.luigidemasi</groupId>
+        <groupId>org.apache.camel</groupId>
         <artifactId>camel-kit</artifactId>
         <version>0.4.2-SNAPSHOT</version>
     </parent>
@@ -74,7 +74,7 @@
         </dependency>
 
         <dependency>
-            <groupId>io.github.luigidemasi</groupId>
+            <groupId>org.apache.camel</groupId>
             <artifactId>camel-kit-ship-resolver</artifactId>
             <version>${project.version}</version>
             <exclusions>
@@ -122,7 +122,7 @@
 
         <!-- Graph builder for project code analysis -->
         <dependency>
-            <groupId>io.github.luigidemasi</groupId>
+            <groupId>org.apache.camel</groupId>
             <artifactId>camel-kit-graph</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -195,7 +195,7 @@
                         <version>${maven.failsafe.plugin.version}</version>
                         <configuration>
                             <classpathDependencyExcludes>
-                                <classpathDependencyExclude>io.github.luigidemasi:camel-kit-ship-resolver</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.apache.camel:camel-kit-ship-resolver</classpathDependencyExclude>
                             </classpathDependencyExcludes>
                             <additionalClasspathElements>
                                 <additionalClasspathElement>${maven.multiModuleProjectDirectory}/camel-kit-ship-resolver/target/camel-kit-ship-resolver-${project.version}.jar</additionalClasspathElement>

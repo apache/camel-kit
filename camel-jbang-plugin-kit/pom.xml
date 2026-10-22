@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.github.luigidemasi</groupId>
+        <groupId>org.apache.camel</groupId>
         <artifactId>camel-kit</artifactId>
         <version>0.4.2-SNAPSHOT</version>
     </parent>
@@ -30,7 +30,7 @@
 
         <!-- Camel Kit Core - reuse existing commands and logic -->
         <dependency>
-            <groupId>io.github.luigidemasi</groupId>
+            <groupId>org.apache.camel</groupId>
             <artifactId>camel-kit-core</artifactId>
             <version>${project.version}</version>
         </dependency>

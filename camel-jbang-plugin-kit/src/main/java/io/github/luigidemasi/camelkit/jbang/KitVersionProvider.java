@@ -8,7 +8,7 @@ import picocli.CommandLine.IVersionProvider;
 public class KitVersionProvider implements IVersionProvider {
 
     private static final String POM_PROPERTIES
-            = "META-INF/maven/io.github.luigidemasi/camel-jbang-plugin-kit/pom.properties";
+            = "META-INF/maven/org.apache.camel/camel-jbang-plugin-kit/pom.properties";
 
     @Override
     public String[] getVersion() throws Exception {

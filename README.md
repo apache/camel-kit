@@ -159,7 +159,7 @@ jbang app install --name camel-kit --force \
 
 # Or install the matching Camel plugin from the local Maven repository
 camel plugin add kit \
-  --gav io.github.luigidemasi:camel-jbang-plugin-kit:0.4.2-SNAPSHOT \
+  --gav org.apache.camel:camel-jbang-plugin-kit:0.4.2-SNAPSHOT \
   --description "Design Apache Camel Integrations with AI"
 
 # Verify

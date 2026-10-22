@@ -34,7 +34,7 @@ cd camel-kit
 ./mvnw clean install -DskipTests
 
 camel plugin add kit \
-  --gav io.github.luigidemasi:camel-jbang-plugin-kit:0.4.2-SNAPSHOT \
+  --gav org.apache.camel:camel-jbang-plugin-kit:0.4.2-SNAPSHOT \
   --description "Design Apache Camel Integrations with AI"
 
 camel kit --help

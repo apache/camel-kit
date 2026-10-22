@@ -263,7 +263,7 @@ class ResolverIsolationIT {
     }
 
     private static void assertPublishedPomHasNoRuntimeDependencies(JarFile archive) throws IOException {
-        String path = "META-INF/maven/io.github.luigidemasi/camel-kit-ship-resolver/pom.xml";
+        String path = "META-INF/maven/org.apache.camel/camel-kit-ship-resolver/pom.xml";
         ZipEntry entry = archive.getEntry(path);
         assertNotNull(entry, "Shaded resolver lacks its published POM");
         String pom = new String(archive.getInputStream(entry).readAllBytes(), StandardCharsets.UTF_8);
