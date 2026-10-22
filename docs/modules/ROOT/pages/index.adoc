@@ -25,19 +25,22 @@ which target Camel {camel-version}.
 == The workflow
 
 ----
-Entry:        /camel-start         routes migration, planning, execution, validation,
-                                   debugging or greenfield work based on context
+Entry:       /camel-start       routes to migration, planning,
+                                execution, validation, debugging or
+                                greenfield work based on context
 
-Greenfield:   /camel-brainstorm -> /camel-plan -> /camel-execute -> /camel-validate
-                                                     |- implements (camel-implement)
-                                                     |- verifies   (camel-verify, internal)
-                                                     '- tests      (camel-test)
+Greenfield:  /camel-brainstorm  then the shared stages below
+Migration:   /camel-migrate     then the shared stages below
 
-Migration:    /camel-migrate    -> /camel-plan -> /camel-execute -> /camel-validate
+Shared:      /camel-plan -> /camel-execute -> /camel-validate
+                              |- implements (camel-implement)
+                              |- verifies   (camel-verify, internal)
+                              '- tests      (camel-test)
 
-Utilities:    /camel-ship          Technology Preview: delegates to the local Ship controller
-              /camel-knowledge     documentation Q&A
-              /camel-debug         standalone troubleshooting
+Utilities:   /camel-ship        Technology Preview: delegates to the
+                                local Ship controller
+             /camel-knowledge   documentation Q&A
+             /camel-debug       standalone troubleshooting
 ----
 
 [cols="1,3"]
