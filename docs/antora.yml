@@ -26,5 +26,6 @@ asciidoc:
   attributes:
     # Keep in step with distribution.properties and the README release channels
     camel-kit-version: 0.4.1
+    camel-kit-snapshot-version: 0.4.2-SNAPSHOT
     camel-kit-knowledge-version: 0.0.2
     camel-version: 4.22.1

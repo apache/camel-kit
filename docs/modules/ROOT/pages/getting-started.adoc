@@ -1,3 +1,270 @@
 = Install and first project
 
-This page is written in a following documentation pull request.
+Camel Kit runs as a standalone command-line tool installed with JBang, or as a plugin of
+xref:manual::camel-jbang.adoc[Camel JBang]. Both forms provide the same commands (`init`, `doctor`, `doc`, `graph`,
+`plan`, `nextId`, `ship`) and the same eight AI targets. The examples on this page use the standalone form,
+`camel-kit`; replace it with `camel kit` when you use the plugin.
+
+== Prerequisites
+
+[cols="1,2,2"]
+|===
+| Requirement | Purpose | Install
+
+| Java 17 or later
+| Runtime for Camel Kit, Camel JBang and the generated projects
+| SDKMAN, Adoptium or your package manager
+
+| https://www.jbang.dev/[JBang]
+| Launcher for Camel Kit and for the MCP servers it configures
+| See the installation commands below
+
+| xref:manual::camel-jbang.adoc[Camel JBang]
+| `camel run` and `camel run --check` for route execution and validation
+| `jbang app install camel@apache/camel`
+
+| Camel JBang test plugin
+| `camel test run` for the Citrus integration tests in the verification loop
+| `camel plugin add test`
+
+| Docker (conditional)
+| Environment probes for external services and full Citrus/Testcontainers verification
+| Docker Engine or Docker Desktop
+|===
+
+Camel JBang and its test plugin are needed for the complete execution and verification loops. When Docker is not
+available, the checks that need containers are reported as skipped; design, planning and the container-free checks
+still work. `camel-kit init` checks Java, JBang, Camel JBang and the test plugin and reports missing tools as
+warnings without stopping.
+
+== Release channels
+
+This documentation describes Camel Kit {camel-kit-version}, which pairs with Knowledge MCP
+{camel-kit-knowledge-version}. Pin the release when you need a reproducible installation.
+
+[cols="1,2,1"]
+|===
+| Channel | Install source | Version
+
+| Release
+| Tagged JBang catalog, or the Camel JBang plugin from Maven Central
+| `{camel-kit-version}`
+
+| Development
+| Unqualified JBang catalog alias, or a source build
+| `{camel-kit-snapshot-version}`
+|===
+
+The unqualified catalog alias follows the latest deployed snapshot, which may lag the `main` branch. Build from source
+for an exact revision.
+
+[[install]]
+== Install
+
+[tabs]
+====
+Standalone (JBang)::
++
+--
+[source,bash,subs="attributes+"]
+----
+# Install JBang (if not already installed)
+curl -Ls https://sh.jbang.dev | bash -s - app setup        # Linux/macOS
+iex "& { $(iwr -useb https://ps.jbang.dev) } app setup"    # Windows PowerShell
+
+# Install the release globally
+jbang app install camel-kit@luigidemasi/camel-kit/camel-kit-{camel-kit-version}
+
+# Verify: prints {camel-kit-version}
+camel-kit --version
+----
+
+To run the release once without installing it:
+
+[source,bash,subs="attributes+"]
+----
+jbang run camel-kit@luigidemasi/camel-kit/camel-kit-{camel-kit-version} \
+  init my-integration --ai claude
+----
+--
+
+Camel JBang plugin::
++
+--
+[source,bash,subs="attributes+"]
+----
+camel plugin add kit \
+  --gav io.github.luigidemasi:camel-jbang-plugin-kit:{camel-kit-version} \
+  --description "Design Apache Camel Integrations with AI"
+
+camel kit init my-integration --ai claude
+----
+--
+
+Development snapshot::
++
+--
+[source,bash,subs="attributes+"]
+----
+# Latest deployed {camel-kit-snapshot-version}
+jbang app install --force camel-kit@luigidemasi/camel-kit
+----
+--
+
+Build from source::
++
+--
+[source,bash,subs="attributes+"]
+----
+git clone https://github.com/apache/camel-kit.git
+cd camel-kit
+./mvnw clean install -DskipTests
+
+# Install the development version globally via JBang
+jbang app install --name camel-kit --force \
+  camel-kit-main/src/main/jbang/main/CamelKit.java
+
+# Or install the matching Camel JBang plugin from the local Maven repository
+camel plugin add kit \
+  --gav org.apache.camel:camel-jbang-plugin-kit:{camel-kit-snapshot-version} \
+  --description "Design Apache Camel Integrations with AI"
+
+camel-kit --help
+----
+
+The Knowledge MCP server (documentation search, CVE tracking, component catalog) is built from its own repository:
+
+[source,bash]
+----
+git clone https://github.com/luigidemasi/camel-kit-knowledge.git
+cd camel-kit-knowledge
+./mvnw clean install -DskipTests
+----
+--
+====
+
+NOTE: The released {camel-kit-version} artifacts are published under the JBang catalog `luigidemasi/camel-kit` and
+the Maven coordinate `io.github.luigidemasi:camel-jbang-plugin-kit`. Development snapshots built from
+`apache/camel-kit` use the `org.apache.camel` group. The first release from the Apache repository will change the
+release coordinates; this page is updated with it.
+
+[[upgrading]]
+== Upgrading
+
+Reinstall the standalone CLI with `jbang app install --force` and the release alias above, or run the plugin
+installation again. To apply updated generated assets to an existing project, commit or back up customized generated
+files, then run `camel-kit init --here --ai <your-agent> --force` from the project root. This rewrites the generated
+assets.
+
+From 0.4.0::
+Camel Main, Camel Spring Boot and Camel MCP default to Camel {camel-version}; the supported older LTS patch is
+4.18.4. Spring Boot uses 4.1.1. Camel {camel-version} maps to Forage 1.6.1. Version {camel-kit-version} also updates
+the shared generation and review guidance to prefer verified declarative bean construction after Forage and component
+configuration (see xref:forage.adoc[]), and Knowledge MCP {camel-kit-knowledge-version} validates endpoints against
+the Camel {camel-version} catalog.
+
+From 0.3.1::
+The `gemini` and `bob` targets were removed in 0.4.0 and replaced by `antigravity` and `bob2` (the default).
+Reinitialize with the replacement target; see xref:agents.adoc#retired-targets[Retired targets].
+
+[[init]]
+== Create a project
+
+[source,bash]
+----
+camel-kit init my-integration --ai claude
+cd my-integration
+----
+
+`init` creates the directory, runs the prerequisite check, and generates the shared project files plus the
+agent-native assets selected by `--ai` (see xref:agents.adoc[] for the eight targets; `bob2` is the default). To add
+Camel Kit to an existing directory, for example a project to migrate, run it with `--here`:
+
+[source,bash]
+----
+camel-kit init --here --ai claude --source-platform mulesoft
+----
+
+If the directory already contains `AGENTS.md` or `.camel-kit/`, `init` warns and exits; pass `--force` to overwrite
+the generated files.
+
+What every target gets::
+* `AGENTS.md`, or the agent's equivalent entry file, with the routing table for the skills.
+* The agent-native skills and entry points, for example `.claude/commands/` and `.claude/skills/` for Claude Code,
+  or `.agents/skills/` for Codex.
+* `docs/constitution.md`, the architecture rules every generated route must follow (see xref:constitution.adoc[]).
+* `docs/flows/`, `test/data/` and `schemas/`, empty scaffolds; pipeline artifacts use the selected runtime's paths.
+* `.camel-kit/` with the project configuration, cached catalogs and templates, and later the pipeline state.
+* The MCP configuration for the target: JSON for most agents, `.codex/config.toml` for Codex, `.mcp.json` read
+  through `pi-mcp-adapter` for Pi.
+* `mvnw`, `mvnw.cmd` and `.mvn/wrapper/maven-wrapper.properties`.
+
+=== Configuration
+
+All defaults (Camel version, BOM versions, MCP server versions) come from the `distribution.properties` file bundled
+in Camel Kit. Three layers override them, the later winning:
+
+. the built-in defaults;
+. `~/.camel-kit/config.properties`, or the file given with `-c`;
+. `-p key=value` flags, repeatable.
+
+[source,bash]
+----
+camel-kit init my-integration --ai claude -p "camel.main.version=4.18.4"
+camel-kit init my-integration --ai claude -c /path/to/my-config.properties
+----
+
+The most common keys are `camel.main.version`, `camel.springboot.version`, `camel.quarkus.version`,
+`quarkus.platform.version`, `knowledge.mcp.version` and `citrus.version`. See xref:commands.adoc[] for the full
+option list, including `--no-fetch` and `--silent`.
+
+=== Check the workspace
+
+[source,bash]
+----
+camel-kit doctor
+camel-kit doctor --json   # for automation
+----
+
+`doctor` checks the generated configuration, command stubs where the target uses them, skill files, MCP filtering and
+permission fields, the project graph, the command prefix, the prerequisites and common stale generated references. It
+prints `PASS`, `WARN` and `FAIL` findings with remediation text. Missing external tools such as JBang are warnings;
+broken generated workspace files are failures.
+
+[[first-command]]
+== Run the first command
+
+Open your coding agent in the project directory and start the router:
+
+----
+/camel-start
+----
+
+`/camel-start` reads the project state and routes to the right stage: migration for an existing MuleSoft, BizTalk,
+Fuse or Camel 2.x/3.x source, planning for an approved design, execution for a plan, validation for generated routes,
+debugging for a broken project outside a pipeline, and the design interview for everything else. You can also describe
+the work in plain words, for example "I want to build an integration that reads from Kafka and writes to a
+database"; the agent reads the routing table and invokes the skill.
+
+The invocation form depends on the agent: `/camel-start` in Claude Code, Bob IDE, Antigravity, Qwen and OpenCode;
+`$camel-start` in Bob Shell and Codex; "Use the `/camel-start` skill" in GitHub Copilot CLI; `/skill:camel-start`
+in Pi. See xref:agents.adoc[].
+
+The first pipeline run needs an active pipeline ID. `init` does not create one, so the agent asks you to create it
+before the interview continues:
+
+[source,bash]
+----
+camel-kit nextId kafka-to-database
+# Output: 001-kafka-to-database
+----
+
+The ID names the directory under `docs/camel-kit/` where the pipeline artifacts are written, so you can close the
+session and resume later.
+
+== Where to go next
+
+* xref:greenfield.adoc[] builds a new integration from requirements to verified routes.
+* xref:migration.adoc[] converts an existing MuleSoft, BizTalk, Fuse or Camel 2.x/3.x project.
+* xref:pipeline.adoc[] explains the stages, the single approval gate and the Iron Laws.
+* xref:commands.adoc[] lists every CLI and slash command option.
