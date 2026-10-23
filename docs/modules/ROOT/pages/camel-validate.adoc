@@ -27,7 +27,7 @@ current project.
 == Checks
 
 The skill first builds the route inventory of every target module for the project's runtime (module-root
-`*.camel.yaml` and `application.properties` for Camel Main, `src/main/resources/camel/` and
+`+*.camel.yaml+` and `application.properties` for Camel Main, `src/main/resources/camel/` and
 `src/main/resources/application.properties` for Spring Boot and Quarkus), then runs:
 
 * Camel YAML DSL schema validation and endpoint configuration;

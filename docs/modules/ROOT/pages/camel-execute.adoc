@@ -115,7 +115,7 @@ module; omit it for a single-module project.
 | Artifact | Camel Main | Spring Boot and Quarkus
 
 | Routes, and XSLT files when DataMapper selects XSLT | `<module>/<name>.camel.yaml`,
-  `<module>/kaoto-datamapper-*.xsl` | `<module>/src/main/resources/camel/`
+  `+<module>/kaoto-datamapper-*.xsl+` | `<module>/src/main/resources/camel/`
 | Application properties | `<module>/application.properties` | `<module>/src/main/resources/application.properties`
 | Schemas, when requested | `<module>/schemas/` | `<module>/src/main/resources/schemas/`
 | Citrus tests and test support | `<module>/src/test/resources/`: `<flow>.camel.it.yaml`, `test-data/`,

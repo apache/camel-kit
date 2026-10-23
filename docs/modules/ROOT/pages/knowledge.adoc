@@ -1,3 +1,145 @@
 = Knowledge MCP
 
-This page is written in a following documentation pull request.
+The Knowledge MCP server gives the agent release-backed access to Apache Camel documentation, component references,
+migration guides, CVE advisories, release notes and Jira issues, from a locally cached index rather than a live
+crawl. Knowledge MCP {camel-kit-knowledge-version} accompanies Camel Kit {camel-kit-version}. Its index, built on
+2026-09-21, holds 20,367 documents covering the supported 4.18 and 4.22 LTS lines, with release history from 4.18 to
+4.22; `camel_docs_index_info` reports the installed corpus.
+
+The server is developed in the https://github.com/luigidemasi/camel-kit-knowledge[camel-kit-knowledge] repository,
+with its own version line. `init` configures it automatically; to run it by hand:
+
+[source,bash,subs="attributes+"]
+----
+jbang io.github.luigidemasi:camel-kit-knowledge-mcp:{camel-kit-knowledge-version}:runner
+----
+
+It speaks stdio and opens no HTTP port by default. For HTTP on localhost add
+`-Dquarkus.http.host-enabled=true -Dquarkus.http.host=127.0.0.1 -Dquarkus.http.port=9090` before the coordinate.
+
+[[tools]]
+== Tools
+
+The server exposes seven `+camel_docs_*+` tools. The workflow manifest allowlists five of them for the generated
+Camel Kit workflow; the other two remain available to direct MCP clients.
+
+[cols="1,2,2"]
+|===
+| Tool | Purpose | Parameters
+
+| `camel_docs_search` | Hybrid search across component references, EIPs, the user manual, migration guides,
+  getting-started guides and release notes | `query`; optional `version`, `max_results` (default 5, at most 25)
+| `camel_docs_component_info` | Reference documentation, examples and options of one component; exact indexed
+  matches are reported separately from fuzzy full-text fallbacks | `component`; optional `version`, `runtime`
+| `camel_docs_cve_search` | CVE advisories by ID, component, severity or fixed-in version, with CVSS and CWE details
+  when NVD enrichment was available | optional `cve_id`, `component`, `severity`, `version`, `max_results`
+| `camel_docs_release_info` | Release notes of a version with features, fixes and Jira references | `version`;
+  optional `max_results`
+| `camel_docs_jira_lookup` | A Jira issue and the indexed release in which it was fixed | `jira_id`
+| `camel_docs_validate_endpoint` (direct clients) | Deterministic validation of one endpoint URI against the catalog
+  bundled in the server, Camel {camel-version} in this release; reports unknown components or options and missing
+  required options | `uri`
+| `camel_docs_index_info` (direct clients) | Document count, covered Camel versions, document types, embedding model
+  and search mode of the active index | none
+|===
+
+[[search]]
+== Search pipeline
+
+General searches blend Lucene BM25 keyword scoring (20 percent) with a KNN vector search over 384-dimensional
+Granite embeddings (80 percent), then rerank the candidates with a local cross-encoder before applying the result
+limit. Keywords keep exact identifiers such as `kafka`, `CVE-2024-22369` or `autoOffsetReset` from being displaced by
+semantically similar results; vectors find documents whose wording differs from the question. Component lookup uses
+exact field matching first and marks any full-text fallback as fuzzy.
+
+If the embedding model is unavailable or does not match the index, the server disables vector retrieval and continues
+with BM25 and the reranker; if the reranker is unavailable, it returns the retrieval order. Embedding and reranking
+run locally through ONNX Runtime; queries are not sent to an external model API.
+
+[cols="1,2"]
+|===
+| Model | Value
+
+| Embedding | granite-embedding-small-english-r2, Q8 ONNX, 384 dimensions, 8,192-token maximum, 2,048 tokens per chunk
+  by default
+| Reranker | ms-marco-MiniLM-L-6-v2, Q8 ONNX
+| Index | Lucene 9.12.1, vectors stored as `KnnFloatVectorField`
+|===
+
+[[contents]]
+== What is indexed
+
+* Component and EIP documentation from Apache Camel, Camel Quarkus and Camel Spring Boot, plus the structured
+  catalog metadata: URI syntax, options, producer and consumer properties, examples.
+* The CVE advisories published with the Camel website, each with its affected and fixed versions and severity, and
+  CVSS, vector and CWE details when the rebuild could enrich them from NVD or, as a fallback, from the CIRCL
+  vulnerability lookup.
+* Release notes with features, fixes, breaking changes and dependency updates, enriched with the Jira issue details.
+* Migration guides, user manual chapters and getting-started guides.
+
+[[distribution]]
+== Index distribution and cache
+
+The index is published as `knowledge-index.zip` with an `index.json` manifest in a GitHub release of the knowledge
+repository; it is not inside the MCP Maven artifact, and normal use needs neither a clone of that repository nor the
+indexer. The server resolves the index lazily on the first query that needs it: an explicit `knowledge.index.path`
+is opened directly; otherwise the manifest at `knowledge.index.url` is fetched, compared with the local cache, and
+the archive is downloaded, checked against its SHA-256 and activated under `~/.camel-kit/knowledge-index/`; a legacy
+classpath index is the last fallback for older bundled artifacts. The
+first query can therefore take longer, and a successful MCP handshake does not mean the index is ready: call
+`camel_docs_index_info` to trigger the initialization and check the installed index.
+
+If a manifest check, download, checksum or activation fails, or times out (three seconds to connect, five seconds for
+the manifest, five minutes for the archive), the server falls back to the active cached version when one is readable;
+a first offline query needs a populated cache or a local index path. Cache updates are serialized across threads and
+processes with file locks, activation uses atomic moves, the current and previous versions are retained, and a
+corrupted staging directory is cleaned up on the next attempt.
+
+[cols="1,2,1"]
+|===
+| Property | Purpose | Default
+
+| `knowledge.index.path` | Use a local index directly, for development, tests or air-gapped use | unset
+| `knowledge.index.url` | Release manifest URL, `https://` or `file://` | the latest GitHub release manifest
+| `knowledge.index.cache-dir` | Downloaded versions and the active-version marker | `~/.camel-kit/knowledge-index`
+|===
+
+[[rebuild]]
+== Rebuilding the index
+
+Rebuilding is a maintainer task. From a checkout of the knowledge repository:
+
+[source,bash]
+----
+./mvnw -pl index -Prebuild-index -am -B install
+----
+
+The rebuild refreshes the Camel website's release metadata and selects every supported LTS line, adding the latest
+release line only when it is not an LTS; it then resolves the latest release tags of those lines, renders their
+documentation, downloads the catalog metadata, parses release notes and advisories, enriches Jira and NVD data,
+generates or reuses cached embeddings and writes the Lucene files with the manifest skeleton. CVE enrichment needs
+no API key; requests are rate-limited and cached, and a failed lookup is retried at a later rebuild. The reviewed
+index is committed, and the manually dispatched release workflow packages and publishes the archive and the completed
+manifest after a retrieval-quality gate.
+
+[cols="1,3"]
+|===
+| Module | Purpose
+
+| `schema` | Lucene field definitions and the document builder
+| `embedding` | Local ONNX embedding and reranker support
+| `indexer` | Version resolution, crawling, parsing, chunking and indexing
+| `index` | The rebuilt Lucene files and the release manifest inputs
+| `mcp` | The Quarkus MCP server exposing the seven tools and resolving the released index
+|===
+
+[[skill]]
+== The camel-knowledge skill
+
+`/camel-knowledge` is a prescriptive question-and-answer layer over the five allowlisted tools. A standalone question
+runs in the primary session: component configuration goes to `camel_docs_component_info`, troubleshooting and best-practice questions go to `camel_docs_search`, and the
+answer cites its sources. When a pipeline stage needs documentation context, the generated instructions isolate the
+lookup in a read-only research role where the agent has one (Bob 2's reviewer preset, Antigravity's reviewer, Qwen's
+reviewer leaf, OpenCode's researcher task) and run it inline on Pi. The role returns a concise answer with references
+instead of raw search results, and a failed lookup is reported as missing evidence rather than replaced with invented
+documentation.

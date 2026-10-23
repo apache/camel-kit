@@ -51,9 +51,9 @@ skills: `camel-start`, `camel-brainstorm`, `camel-migrate`, `camel-plan`, `camel
 $camel-migrate MuleSoft flows in src/main/mule
 ----
 
-Bob Shell's native skill picker uses `$camel-*`; its `/` picker holds built-in commands and MCP prompts, so a
-`/camel-*` name in this documentation corresponds to a `$camel-*` skill there. Bob IDE exposes the same skills as
-`/camel-*`. Legacy command stubs stay installed for compatibility. The four internal helper skills are hidden.
+Bob Shell's native skill picker uses `+$camel-*+`; its `/` picker holds built-in commands and MCP prompts, so a
+`+/camel-*+` name in this documentation corresponds to a `+$camel-*+` skill there. Bob IDE exposes the same skills as
+`+/camel-*+`. Legacy command stubs stay installed for compatibility. The four internal helper skills are hidden.
 
 If a public skill does not appear in the picker, run `camel-kit doctor`: it reports each affected `SKILL.md` as
 `FAIL` with regeneration instructions. Regenerate from the project root with

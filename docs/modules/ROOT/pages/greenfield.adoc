@@ -161,7 +161,7 @@ writes `execution-report.md`.
 | PASS, SKIPPED or FAILED with the reason
 
 | Test
-| Discovers `*.it.yaml` files recursively and runs `camel test run` when the Camel test plugin is available. Tests
+| Discovers `+*.it.yaml+` files recursively and runs `camel test run` when the Camel test plugin is available. Tests
   that declare Testcontainers also need Docker; container-free and mock-only tests run without it
 | Passed-test count, or an explicit skip or failure
 

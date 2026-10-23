@@ -83,7 +83,7 @@ verifies each target and its options in the catalog for the selected Camel versi
 |===
 
 Infrastructure beans such as data sources and connection factories are configured through the Forage configuration
-ladder (see xref:forage.adoc[]) before `camel.beans.*` is considered.
+ladder (see xref:forage.adoc[]) before `+camel.beans.*+` is considered.
 
 Proprietary connectors have no direct equivalent. The agent stops and asks you to choose a replacement, one
 connector at a time, and verifies the choice in the catalog:

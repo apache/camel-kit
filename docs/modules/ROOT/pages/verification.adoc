@@ -2,7 +2,8 @@
 
 `camel-verify` is the internal skill that checks whether the generated integration actually builds, starts and
 behaves as its tests expect. `/camel-execute` dispatches it once, after all tasks and the cross-cutting review, in an
-isolated subagent where the agent supports one and inline otherwise. It has no command stub: for a route that breaks
+isolated subagent where the agent's trait allows one (Qwen Code and OpenCode keep it in their primary executor) and
+inline otherwise. It has no command stub: for a route that breaks
 outside a pipeline run use xref:camel-debug.adoc[`/camel-debug`].
 
 The result is a structured report embedded in `docs/camel-kit/<pipeline-id>/execution-report.md` and summarized
@@ -51,7 +52,7 @@ Build attempt 3: PASS
 [[phase2]]
 == Phase 2: tests
 
-The skill discovers every `*.it.yaml` file in the project, validates each one against the configured Citrus version
+The skill discovers every `+*.it.yaml+` file in the project, validates each one against the configured Citrus version
 and the approved task and design, classifies the files that declare Testcontainers as Docker-dependent, and runs the
 runnable ones with the Camel JBang test plugin:
 

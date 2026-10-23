@@ -60,7 +60,7 @@ Camel version and runtime, and a component that is not listed is checked there t
 | `swagger-java` | `openapi-java` |
 | `ibatis`, `mqtt` | `mybatis`, `paho` |
 | `direct-vm`, `vm` | `direct`, `seda` | Cross-context variants removed in 4.0
-| `aws-*` | `aws2-*` | AWS SDK v2; `aws-swf` was removed, use `aws2-step-functions`
+| `+aws-*+` | `+aws2-*+` | AWS SDK v2; `aws-swf` was removed, use `aws2-step-functions`
 | `dozer` | Removed | Extract the mapping and use DataMapper
 | `hdfs2`, `hdfs` | Removed | `camel-hdfs` was removed in Camel 4.4; choose a replacement and verify it in the catalog
 | `boon`, `jibx`, `linkedin`, `ironmq`, `etcd`, `ganglia`, `spark-rest`, `chronicle-engine`, `rx-netty` |
@@ -175,7 +175,7 @@ forage.myDataSource.jdbc.password={{db.password}}
 The data source becomes a Forage-backed named bean with external connection values. Camel Main uses the
 double-brace property placeholder syntax inside `application.properties`; Spring Boot and Quarkus use the
 dollar-brace syntax. Camel Kit verifies Forage availability and the keys in its cached catalog first; without
-Forage it continues down the configuration ladder to catalog-verified component properties and uses `camel.beans.*`
+Forage it continues down the configuration ladder to catalog-verified component properties and uses `+camel.beans.*+`
 only as a documented last resort.
 
 === Deprecated component swap
@@ -233,7 +233,7 @@ them.
 == After the migration
 
 . Review the generated YAML routes and configuration.
-. Update retained Java source from `javax.*` to `jakarta.*`: Camel 4 requires Jakarta EE 10.
+. Update retained Java source from `+javax.*+` to `+jakarta.*+`: Camel 4 requires Jakarta EE 10.
 . Run the routes locally with `camel run` or the target runtime's development mode.
 . Check the xref:manual::camel-4-migration-guide.adoc[Camel 4 migration guide] for breaking changes outside the
   migrated routes.

@@ -15,7 +15,7 @@ is Camel Kit {camel-kit-version} with Knowledge MCP {camel-kit-knowledge-version
 * *AI-guided design.* Slash commands run a structured interview and produce a versionable design specification.
 * *Platform migration.* Detects the source platform and converts MuleSoft 3.x and 4.x, Microsoft BizTalk,
   Camel 2.x and 3.x, and JBoss Fuse projects to Camel 4 with YAML DSL routes.
-* *Catalog verification over MCP.* Components, endpoint options and infrastructure `forage.*` keys are verified
+* *Catalog verification over MCP.* Components, endpoint options and infrastructure `+forage.*+` keys are verified
   against the Camel catalog and the Forage catalog at design and review time.
 * *Graph intelligence.* Nine parsers and two post-processors build a dependency-injection-aware property graph of
   the codebase for analysis and migration context.
