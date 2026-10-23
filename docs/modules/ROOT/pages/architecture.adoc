@@ -20,7 +20,9 @@ front matter against it.
 
 | 1. Agent instructions
 | The cross-agent equalization layer: a routing table from user intent to the right command, the six Iron Laws, and
-  the MCP setup
+  the MCP setup; the development snapshot adds fifteen Camel YAML DSL rules (placement and value types,
+  `routeConfiguration`, HTTP and mail headers, dependency loading, ActiveMQ acknowledgement modes) that the agent sees even
+  before a skill is loaded
 | `AGENTS.md`, or the agent's own entry file (`CLAUDE.md`, `QWEN.md`, `.github/copilot-instructions.md`)
 
 | 2. Skills
