@@ -29,3 +29,6 @@ asciidoc:
     camel-kit-snapshot-version: 0.4.2-SNAPSHOT
     camel-kit-knowledge-version: 0.0.2
     camel-version: 4.22.1
+    pi-version: 0.84.2
+    pi-previous-version: 0.83.0
+    node-version: 22.22.2
