@@ -193,6 +193,8 @@ both syntaxes.
       parameters:
         httpMethodRestrict: POST
       steps:
+        - unmarshal:
+            json: {}
         - to: "direct:validate-order"
 - route:
     id: validate-order
@@ -200,10 +202,15 @@ both syntaxes.
       uri: "direct:validate-order"
       steps:
         - validate:
-            simple: "${body.orderId} != null"
+            simple: "${body[orderId]} != null"
 ----
 
+The JSON body is unmarshalled to a map before the sub-route reads it; a bean-style `body.orderId` expression on the
+raw JSON string would fail.
+
 === Choice router
+
+Conditional routing on a JSON payload that an earlier step unmarshalled to a map.
 
 .Mule XML
 [source,xml]
@@ -223,7 +230,7 @@ both syntaxes.
 ----
 - choice:
     when:
-      - simple: ${body.amount} > 1000
+      - simple: ${body[amount]} > 1000
         steps:
           - to: direct:high-value-processing
     otherwise:

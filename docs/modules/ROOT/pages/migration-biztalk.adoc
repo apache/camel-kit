@@ -202,13 +202,16 @@ The `OrderToInvoiceMap` in this orchestration has at least 20 leaf fields and a 
                   uri: "xslt-saxon:kaoto-datamapper-a1b2c3d4.xsl"
         - choice:
             when:
-              - simple: "${body.amount} > 1000"
+              - xpath: "/Invoice/Amount > 1000"
                 steps:
                   - to: "direct:high-value-processing"
             otherwise:
               steps:
                 - to: "direct:standard-processing"
 ----
+
+The `xslt-saxon` step returns the transformed document as a string, so the decision reads it with XPath; a
+bean-style Simple expression on the body would fail.
 
 [[manual-review]]
 == Flagged for manual review

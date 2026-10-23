@@ -24,7 +24,9 @@ covers Fuse).
 [[init]]
 == Initialize the project for migration
 
-Run `init` inside the existing project with `--here`; the existing source and build files are not modified.
+Run `init` inside the existing project with `--here`. The application sources and `pom.xml` are left alone, but
+`init` writes or replaces `mvnw`, `mvnw.cmd` and `.mvn/wrapper/maven-wrapper.properties` even without `--force`,
+so commit or back up a customized Maven wrapper first.
 
 [source,bash]
 ----
@@ -65,6 +67,9 @@ A *direct mode*, selected with `/camel-migrate --direct` or when the request nam
 scan, detection and analysis steps and then implements the route files and properties directly, validates them,
 runs the adversarial review and starts the application with your explicit authorization. It writes a `MIGRATION.md`
 note instead of the four-document package and does not invoke `/camel-plan`.
+
+NOTE: Direct mode is development snapshot only ({camel-kit-snapshot-version}); release {camel-kit-version} always
+produces the design package.
 
 [[discovery]]
 == Discovery

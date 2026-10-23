@@ -31,7 +31,7 @@ reports.
 [[claude]]
 == Anthropic Claude Code
 
-`init` writes `CLAUDE.md` (which imports `AGENTS.md`), the slash commands under `.claude/commands/`, the skills under
+`init` writes `CLAUDE.md` (which points to `AGENTS.md`), the slash commands under `.claude/commands/`, the skills under
 `.claude/skills/`, project settings in `.claude/settings.json` and the MCP servers in `.mcp.json`. Start with
 `/camel-start`. During `/camel-execute`, independent tasks of the same wave are dispatched to parallel subagents with
 isolated context windows.
@@ -92,8 +92,8 @@ codex
 ----
 
 `init` writes `AGENTS.md`, the skills under `.agents/skills/`, the custom agent roles under `.codex/agents/`
-(planner, implementer, tester, validator, migrator, catalog researcher, security reviewer and a Ship worker) and the
-three MCP servers in `.codex/config.toml`. It does not create `.codex/commands/`: Codex discovers the skills
+(planner, implementer, tester, validator, migrator, catalog researcher and security reviewer; the development
+snapshot adds a Ship worker) and the three MCP servers in `.codex/config.toml`. It does not create `.codex/commands/`: Codex discovers the skills
 directly, so you start with `$camel-start` after trusting the repository, and inspect skills with `/skills` and
 servers with `/mcp`.
 

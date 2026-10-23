@@ -56,12 +56,13 @@ Camel version and runtime, and a component that is not listed is checked there t
 
 | `http4`, `https4` | `http`, `https` | Renamed in 3.0
 | `netty4`, `netty4-http` | `netty`, `netty-http` |
-| `mina2`, `quartz2`, `mongodb3`, `hdfs2`, `rxjava2` | `mina`, `quartz`, `mongodb`, `hdfs`, `rxjava` |
+| `mina2`, `quartz2`, `mongodb3`, `rxjava2` | `mina`, `quartz`, `mongodb`, `rxjava` |
 | `swagger-java` | `openapi-java` |
 | `ibatis`, `mqtt` | `mybatis`, `paho` |
 | `direct-vm`, `vm` | `direct`, `seda` | Cross-context variants removed in 4.0
 | `aws-*` | `aws2-*` | AWS SDK v2; `aws-swf` was removed, use `aws2-step-functions`
 | `dozer` | Removed | Extract the mapping and use DataMapper
+| `hdfs2`, `hdfs` | Removed | `camel-hdfs` was removed in Camel 4.4; choose a replacement and verify it in the catalog
 | `boon`, `jibx`, `linkedin`, `ironmq`, `etcd`, `ganglia`, `spark-rest`, `chronicle-engine`, `rx-netty` |
   Removed | The agent stops and asks; suggested alternatives include `jackson`, `jaxb`, `aws2-sqs`, `consul`,
   `micrometer` and `platform-http`

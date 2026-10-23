@@ -39,8 +39,9 @@ warnings without stopping.
 
 == Release channels
 
-This documentation describes Camel Kit {camel-kit-version}, which pairs with Knowledge MCP
-{camel-kit-knowledge-version}. Pin the release when you need a reproducible installation.
+This documentation follows the development branch ({camel-kit-snapshot-version}). The latest release is Camel Kit
+{camel-kit-version}, which pairs with Knowledge MCP {camel-kit-knowledge-version}; features that are not in the
+release are marked as development snapshot only. Pin the release when you need a reproducible installation.
 
 [cols="1,2,1"]
 |===
@@ -197,7 +198,7 @@ What every target gets::
 * `.camel-kit/` with the project configuration, cached catalogs and templates, and later the pipeline state.
 * The MCP configuration for the target: JSON for most agents, `.codex/config.toml` for Codex, `.mcp.json` read
   through `pi-mcp-adapter` for Pi.
-* `mvnw`, `mvnw.cmd` and `.mvn/wrapper/maven-wrapper.properties`.
+* `mvnw`, `mvnw.cmd` and `.mvn/wrapper/maven-wrapper.properties`, written or replaced even when they exist.
 
 === Configuration
 

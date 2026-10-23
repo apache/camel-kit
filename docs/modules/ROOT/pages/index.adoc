@@ -6,8 +6,9 @@ testing, and runtime verification, and it checks every component and option agai
 does so. It is available as a standalone command-line tool and as a Camel JBang plugin, and it generates the same
 skills for several coding agents.
 
-This documentation describes Camel Kit {camel-kit-version} with Knowledge MCP {camel-kit-knowledge-version},
-which target Camel {camel-version}.
+This documentation follows the development branch of Camel Kit ({camel-kit-snapshot-version}). The latest release
+is Camel Kit {camel-kit-version} with Knowledge MCP {camel-kit-knowledge-version}, which target Camel
+{camel-version}; features that are not in the release are marked as development snapshot only.
 
 == What it does
 
