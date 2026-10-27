@@ -27,7 +27,7 @@ github:
     - yaml
     - mcp
   enabled_merge_buttons:
-    merge: true
+    merge: false
     rebase: true
     squash: true
   features:
@@ -51,3 +51,4 @@ github:
 
 notifications:
   issues: commits@camel.apache.org
+  pullrequests: commits@camel.apache.org
