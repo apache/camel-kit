@@ -38,6 +38,7 @@ public class GitRepoFetcher {
      *
      * <ul>
      * <li>If repo exists with .git → fetch + hard reset to latest (fast, only downloads delta)</li>
+     * <li>If opening or updating the existing repo fails → delete and re-clone</li>
      * <li>If repo exists without .git (corrupted) → delete and re-clone</li>
      * <li>If repo doesn't exist → fresh shallow clone</li>
      * </ul>
@@ -92,7 +93,7 @@ public class GitRepoFetcher {
      * Lists all tags from a remote Git repository without cloning it. Uses JGit's {@code ls-remote --tags} equivalent.
      *
      * @param  repoUrl the remote repository URL
-     * @return         tag names without {@code refs/tags/} prefix, excluding dereferenced {@code ^{}} entries
+     * @return         tag names without {@code refs/tags/} prefix
      */
     public static List<String> listRemoteTags(String repoUrl) throws IOException {
         try {
@@ -103,7 +104,6 @@ public class GitRepoFetcher {
 
             return refs.stream()
                     .map(ref -> ref.getName().replaceFirst("^refs/tags/", ""))
-                    .filter(name -> !name.endsWith("^{}"))
                     .toList();
         } catch (GitAPIException e) {
             throw new IOException("Failed to list tags from " + repoUrl, e);
@@ -135,7 +135,7 @@ public class GitRepoFetcher {
             long elapsed = (System.currentTimeMillis() - start) / 1000;
             LOG.info("  Updated: {} ({}s)", localName, elapsed);
 
-        } catch (GitAPIException e) {
+        } catch (GitAPIException | IOException e) {
             // Update failed — fall back to fresh clone
             LOG.warn("  Update failed for {}: {} — re-cloning", localName, e.getMessage());
             deleteDirectory(repoDir);

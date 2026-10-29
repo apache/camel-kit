@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Recover cached document repositories with an invalid `.git` directory by re-cloning
+  them instead of failing every indexing attempt.
+
 ### Monorepo migration
 
 - Move Kit and Knowledge into sibling `kit/` and `knowledge/` directories with a shared,

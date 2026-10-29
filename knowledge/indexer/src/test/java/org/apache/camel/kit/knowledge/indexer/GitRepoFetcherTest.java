@@ -1,7 +1,6 @@
 package org.apache.camel.kit.knowledge.indexer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -10,8 +9,6 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.transport.Daemon;
-import org.eclipse.jgit.transport.resolver.FileResolver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +26,6 @@ class GitRepoFetcherTest {
     Path tempDir;
 
     private Git upstream;
-    private Daemon daemon;
     private String repoUrl;
     private GitRepoFetcher fetcher;
     private RevCommit latest;
@@ -37,11 +33,6 @@ class GitRepoFetcherTest {
     @BeforeEach
     void createLocalRepository() throws Exception {
         upstream = Git.init().setDirectory(tempDir.resolve("upstream").toFile()).setInitialBranch("main").call();
-        var config = upstream.getRepository().getConfig();
-        config.setBoolean("commit", null, "gpgSign", false);
-        config.setBoolean("tag", null, "gpgSign", false);
-        config.setBoolean("tag", null, "forceSignAnnotated", false);
-        config.save();
         writeUpstream("document.md", "first version");
         writeUpstream("notes.txt", "not a Markdown document");
         writeUpstream("nested/other.md", "nested document");
@@ -51,25 +42,14 @@ class GitRepoFetcherTest {
         latest = commit("second version");
         tag("v2");
 
-        // The local file transport cannot exercise the shallow-clone protocol.
-        daemon = new Daemon(new InetSocketAddress("127.0.0.1", 0));
-        daemon.setRepositoryResolver(new FileResolver<>(tempDir.toFile(), true));
-        daemon.setTimeout(10);
-        daemon.start();
-        repoUrl = "git://127.0.0.1:" + daemon.getAddress().getPort() + "/upstream";
+        repoUrl = tempDir.resolve("upstream").toUri().toString();
         fetcher = new GitRepoFetcher(tempDir.resolve("cache"));
     }
 
     @AfterEach
-    void closeLocalRepository() throws Exception {
-        try {
-            if (daemon != null) {
-                daemon.stopAndWait();
-            }
-        } finally {
-            if (upstream != null) {
-                upstream.close();
-            }
+    void closeLocalRepository() {
+        if (upstream != null) {
+            upstream.close();
         }
     }
 
@@ -84,7 +64,7 @@ class GitRepoFetcherTest {
             assertTrue(clone.getRepository().getObjectDatabase().getShallowCommits().contains(latest.getId()));
             var history = clone.log().call().iterator();
             assertEquals(latest.getId(), history.next().getId());
-            assertFalse(history.hasNext(), "The clone must not contain the first commit's history");
+            assertFalse(history.hasNext(), "History from HEAD must stop at the shallow boundary");
         }
     }
 
@@ -145,8 +125,9 @@ class GitRepoFetcherTest {
         Path repoDir = fetcher.fetchRepo(repoUrl, "v1", "documents", true);
         Path sentinel = repoDir.resolve(".git/retained-on-cache-hit");
         Files.writeString(sentinel, "cached repository");
-        daemon.stopAndWait();
-        assertFalse(daemon.isRunning());
+        upstream.close();
+        upstream = null;
+        Files.move(tempDir.resolve("upstream"), tempDir.resolve("offline-upstream"));
 
         assertEquals(repoDir, fetcher.fetchRepo(repoUrl, "v1", "documents", true));
 
@@ -182,6 +163,23 @@ class GitRepoFetcherTest {
         assertTrue(Files.isDirectory(repoDir.resolve(".git")));
         assertEquals("second version", Files.readString(repoDir.resolve("document.md")));
         assertFalse(Files.exists(partial));
+    }
+
+    @Test
+    void recoversCloneWithInvalidGitDirectory() throws Exception {
+        Path repoDir = tempDir.resolve("cache/documents");
+        Files.createDirectories(repoDir.resolve(".git"));
+        Path partial = repoDir.resolve("partial.md");
+        Files.writeString(partial, "interrupted clone");
+
+        assertEquals(repoDir, fetcher.fetchRepo(repoUrl, "main", "documents"));
+
+        assertEquals("second version", Files.readString(repoDir.resolve("document.md")));
+        assertFalse(Files.exists(partial));
+        try (Git clone = Git.open(repoDir.toFile())) {
+            assertEquals(latest.getId(), clone.getRepository().resolve("HEAD"));
+            assertTrue(clone.status().call().isClean());
+        }
     }
 
     @Test
