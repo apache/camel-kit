@@ -866,6 +866,43 @@ The **Iron Laws** define six pipeline process rules (how the pipeline operates):
 
 Iron Law 2 explicitly incorporates and enforces the 8 constitution rules. They are complementary, not overlapping -- the constitution says what to check, the iron laws say when and how to enforce it.
 
+### Security Model Document (Oct 2026)
+
+Camel-Kit publishes its security model and threat model as `docs/security-model.md`, structured with the
+threat-model rubric the Apache Security team uses for sub-projects (header with version binding and provenance
+tags, component families, trust boundaries, claimed and disclaimed properties, known non-findings, a closed set
+of triage dispositions, and open maintainer questions), plus a derived `docs/security-model.yaml` sidecar and a
+root `SECURITY.md` with the ASF reporting process. It is the additive sub-project expansion of the
+[Apache Camel Security Model](https://camel.apache.org/manual/security-model.html), as Camel K's `docs/threat-model.md`
+is for the Kubernetes layer.
+
+Rejected alternatives: an AsciiDoc page in an Antora module as Camel core uses (Camel-Kit has no Antora site; its
+documentation is GitHub-rendered Markdown under `docs/`); a `SECURITY.md`-only policy with no model (gives
+triagers no dispositions to cite and leaves the AI-agent, graph-parsing and Ship boundaries undefined);
+inheriting the umbrella model verbatim as camel-spring-boot does (Camel-Kit introduces development-time boundaries
+-- untrusted source trees read without running them, model output, dynamic artifact resolution, a local
+controller -- that the umbrella model excludes); and omitting the YAML sidecar (automated triage is the stated
+purpose, and both the umbrella model and Camel K ship one). Generated workspace instructions deliberately do not
+link to the model; they carry the operative rules themselves (Iron Laws, `context-authority.md`, the security
+checklist).
+
+After review round 2 (2026-10-27) the maintainers answered the model's thirteen questions: the graph source-reading
+contract is inherited in full from the umbrella model, Knowledge is covered by a dedicated section of the same document
+rather than a companion model (rejected: a separate Knowledge model, which would have split the triage reference for
+one repository), the side-effect inventory is kept per process rather than as blanket statements, and acceptance is
+gated on verification items (tested parser guarantees, graph confinement and bounds, narrower Claude MCP defaults, a
+verified inventory, init and download path controls, Knowledge verification).
+
+After review round 3 (2026-11-02) two triage and inventory rules were settled. A report that only restates the known
+Claude MCP wildcard grant is `VALID-HARDENING` under its verification item, but a report that demonstrates a breach
+through that grant is triaged on the breach and its impact, never downgraded or closed as a duplicate (rejected:
+routing every wildcard report to the verification item, which would have suppressed a real credential or destructive
+access finding). The side-effect inventory distinguishes what a process is intended to write from what it can reach:
+the Pi worker's staging workspace is a working directory, not a confinement, and the Knowledge server's classpath
+fallback (a temporary `knowledge-index*` directory, used only when resolution fails with no pinned version) is listed
+with its conditions (rejected: omitting the fallback as legacy, since it is shipped code). Each verification item has
+a tracking issue (#153–#158), and the Knowledge transport statements follow apache/camel-kit#143.
+
 ---
 
 ## 10. How to Add a Skill
