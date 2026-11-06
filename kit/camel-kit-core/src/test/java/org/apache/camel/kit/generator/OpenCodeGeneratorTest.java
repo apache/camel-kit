@@ -89,6 +89,7 @@ class OpenCodeGeneratorTest {
         assertTrue(Files.exists(agentsDir.resolve("executor.md")));
         assertTrue(Files.exists(agentsDir.resolve("researcher.md")));
         assertTrue(Files.exists(agentsDir.resolve("reviewer.md")));
+        assertTrue(Files.exists(agentsDir.resolve("camel-ship-worker.md")));
 
         AgentDescriptor descriptor = AgentRegistry.descriptor("opencode");
         Set<String> registeredAgents = descriptor.templates().stream()
@@ -97,6 +98,7 @@ class OpenCodeGeneratorTest {
                 .collect(Collectors.toSet());
         assertEquals(Set.of(
                 ".opencode/agents/brainstormer.md",
+                ".opencode/agents/camel-ship-worker.md",
                 ".opencode/agents/executor.md",
                 ".opencode/agents/implementer.md",
                 ".opencode/agents/migrator.md",
@@ -113,7 +115,7 @@ class OpenCodeGeneratorTest {
         new OpenCodeGenerator().generate(ctx);
 
         for (String name : new String[]{
-                "brainstormer", "executor", "implementer", "migrator", "planner",
+                "brainstormer", "camel-ship-worker", "executor", "implementer", "migrator", "planner",
                 "researcher", "reviewer", "tester", "validator"
         }) {
             String content = Files.readString(tempDir.resolve(".opencode/agents/" + name + ".md"));
@@ -138,7 +140,7 @@ class OpenCodeGeneratorTest {
         assertTrue(planner.contains("\"docs/camel-kit/**\": allow"));
         assertTrue(validator.contains("\"docs/camel-kit/*/validation-report.md\": allow"));
         assertTrue(validator.contains("\"docs/validation-report-*.md\": allow"));
-        assertTrue(validator.contains("task: deny"));
+        assertTrue(validator.contains("subagent: deny"));
         assertTrue(validator.contains("bounded validation analysis"));
         assertFalse(validator.contains("follow those instructions exactly"));
         assertFalse(brainstormer.contains("\nedit:"));
@@ -180,16 +182,16 @@ class OpenCodeGeneratorTest {
         String content = Files.readString(
                 tempDir.resolve(".opencode/agents/executor.md"));
         assertTrue(content.contains("mode: primary"));
-        String taskPermissions = content.substring(
-                content.indexOf("  task:"), content.indexOf("steps:"));
-        assertTrue(taskPermissions.contains("\"*\": deny"));
-        assertTrue(taskPermissions.contains("implementer: allow"));
-        assertTrue(taskPermissions.contains("migrator: allow"));
-        assertTrue(taskPermissions.contains("planner: allow"));
-        assertTrue(taskPermissions.contains("researcher: allow"));
-        assertTrue(taskPermissions.contains("reviewer: allow"));
-        assertTrue(taskPermissions.contains("tester: allow"));
-        assertFalse(taskPermissions.contains("validator: allow"));
+        String subagentPermissions = content.substring(
+                content.indexOf("  subagent:"), content.indexOf("steps:"));
+        assertTrue(subagentPermissions.contains("\"*\": deny"));
+        assertTrue(subagentPermissions.contains("implementer: allow"));
+        assertTrue(subagentPermissions.contains("migrator: allow"));
+        assertTrue(subagentPermissions.contains("planner: allow"));
+        assertTrue(subagentPermissions.contains("researcher: allow"));
+        assertTrue(subagentPermissions.contains("reviewer: allow"));
+        assertTrue(subagentPermissions.contains("tester: allow"));
+        assertFalse(subagentPermissions.contains("validator: allow"));
         assertTrue(content.contains("steps: 100"));
     }
 
@@ -203,8 +205,68 @@ class OpenCodeGeneratorTest {
                     tempDir.resolve(".opencode/agents/" + name + ".md"));
             assertTrue(content.contains("edit: deny"));
             assertTrue(content.contains("bash: deny"));
-            assertTrue(content.contains("task: deny"));
+            assertTrue(content.contains("subagent: deny"));
         }
+    }
+
+    @Test
+    void shipWorkerIsReadOnlyAndCannotRedispatch() throws Exception {
+        InitContext ctx = createContext();
+        new OpenCodeGenerator().generate(ctx);
+
+        String content = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertFalse(content.contains("\"*\": deny"),
+                "Ship worker must not use catch-all deny which blocks external_directory access");
+        assertTrue(content.contains("edit: deny"),
+                "Ship worker must deny edit tool");
+        assertTrue(content.contains("write: deny"),
+                "Ship worker must deny write tool");
+        assertTrue(content.contains("bash: deny"),
+                "Ship worker must deny bash tool");
+        assertTrue(content.contains("subagent: deny"),
+                "Ship worker must deny subagent tool");
+        assertTrue(content.contains("mcp: deny"),
+                "Ship worker must deny MCP tools to block inherited MCP access");
+        assertTrue(content.contains("camel_*: deny"),
+                "Ship worker must deny inherited camel MCP tool actions");
+        assertTrue(content.contains("camel-knowledge_*: deny"),
+                "Ship worker must deny inherited camel-knowledge MCP tool actions");
+        assertTrue(content.contains("citrus_*: deny"),
+                "Ship worker must deny inherited citrus MCP tool actions");
+        assertFalse(content.contains("read: allow"),
+                "Ship worker must not unconditionally allow read to preserve per-path restrictions");
+        assertFalse(content.contains("edit: allow"));
+        assertFalse(content.contains("bash: allow"));
+        assertFalse(content.contains("subagent: allow"));
+    }
+
+    @Test
+    void shipWorkerDeniesCustomInheritedMcpServers() throws Exception {
+        InitContext ctx = createContext();
+        new OpenCodeGenerator().generate(ctx);
+
+        Path configFile = tempDir.resolve("opencode.json");
+        com.fasterxml.jackson.databind.node.ObjectNode config
+                = (com.fasterxml.jackson.databind.node.ObjectNode) new ObjectMapper().readTree(configFile.toFile());
+        com.fasterxml.jackson.databind.node.ObjectNode probe = new ObjectMapper().createObjectNode();
+        probe.put("type", "local");
+        probe.set("command", new ObjectMapper().createArrayNode().add("echo"));
+        probe.put("enabled", true);
+        ((com.fasterxml.jackson.databind.node.ObjectNode) config.path("mcp")).set("probe", probe);
+        Files.writeString(configFile, new ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(config));
+
+        new OpenCodeGenerator().generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("probe_*: deny"),
+                "Ship worker must deny custom inherited MCP server tools");
+        assertTrue(worker.contains("camel_*: deny"),
+                "Ship worker must still deny bundled camel MCP server tools");
+        assertTrue(worker.contains("camel-knowledge_*: deny"),
+                "Ship worker must still deny bundled camel-knowledge MCP server tools");
     }
 
     @Test
@@ -700,7 +762,7 @@ class OpenCodeGeneratorTest {
         String execute = Files.readString(
                 tempDir.resolve(".opencode/skills/camel-execute/SKILL.md"));
         assertTrue(execute.contains("selects the generated primary `executor`"));
-        assertTrue(execute.contains("subagent_type"));
+        assertTrue(execute.contains("`agent`"));
         assertTrue(execute.contains("dispatch `implementer` (`steps: 50`)"));
         assertTrue(execute.contains("dispatch `migrator` (`steps: 50`)"));
         assertTrue(execute.contains("dispatch `tester` (`steps: 40`)"));
@@ -713,7 +775,7 @@ class OpenCodeGeneratorTest {
         assertFalse(execute.contains("use the `Build`"));
         assertTrue(execute.contains("`test-engineer`"));
         assertTrue(execute.contains("`migration-specialist`"));
-        assertTrue(execute.contains("`subagent_type`"));
+        assertTrue(execute.contains("`subagent`"));
     }
 
     @Test
@@ -739,7 +801,7 @@ class OpenCodeGeneratorTest {
             assertTrue(definition.contains(".opencode/skills/shared/context-authority.md"), role);
         }
         String knowledge = Files.readString(ctx.skillsDir().resolve("camel-knowledge/SKILL.md"));
-        assertTrue(knowledge.contains("subagent_type: researcher"));
+        assertTrue(knowledge.contains("agent: researcher"));
         assertTrue(knowledge.contains(".opencode/camel-kit-personas/knowledge-researcher.md"));
         assertFalse(knowledge.contains("as a `knowledge-researcher` subagent"));
     }
@@ -951,5 +1013,401 @@ class OpenCodeGeneratorTest {
                 "citrus_* permission must not reappear");
         assertTrue(result.contains("\"camel\""), "camel mcp must remain");
         assertTrue(result.contains("\"camel_*\""), "camel_* permission must remain");
+    }
+
+    @Test
+    void shipWorkerDeniesServersFromAllProjectConfigLayers() throws Exception {
+        InitContext ctx = createContext();
+
+        Files.writeString(tempDir.resolve("opencode.json"), """
+                {
+                  "mcp": {
+                    "lower-layer-probe": {"type": "local", "command": ["echo"], "enabled": true}
+                  }
+                }
+                """);
+        Files.writeString(tempDir.resolve("opencode.jsonc"), """
+                {
+                  "mcp": {}
+                }
+                """);
+
+        new OpenCodeGenerator().generate(ctx);
+
+        JsonNode lower = readOpenCodeConfig(tempDir.resolve("opencode.json"));
+        assertTrue(lower.path("mcp").has("lower-layer-probe"),
+                "Lower config layer must retain its custom MCP server");
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("lower-layer-probe_*: deny"),
+                "Ship worker must deny MCP servers from lower-precedence config layers");
+        assertTrue(worker.contains("camel_*: deny"),
+                "Ship worker must still deny bundled camel MCP server tools");
+    }
+
+    @Test
+    void shipWorkerNormalizesServerNamesForDenialGlobs() throws Exception {
+        InitContext ctx = createContext();
+        new OpenCodeGenerator().generate(ctx);
+
+        Path configFile = tempDir.resolve("opencode.json");
+        com.fasterxml.jackson.databind.node.ObjectNode config
+                = (com.fasterxml.jackson.databind.node.ObjectNode) new ObjectMapper().readTree(configFile.toFile());
+        com.fasterxml.jackson.databind.node.ObjectNode probe = new ObjectMapper().createObjectNode();
+        probe.put("type", "local");
+        probe.set("command", new ObjectMapper().createArrayNode().add("echo"));
+        probe.put("enabled", true);
+        ((com.fasterxml.jackson.databind.node.ObjectNode) config.path("mcp")).set("probe.local", probe);
+        Files.writeString(configFile, new ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(config));
+
+        new OpenCodeGenerator().generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("probe_local_*: deny"),
+                "Ship worker must normalize dots to underscores in MCP server denial globs");
+        assertFalse(worker.contains("probe.local_*: deny"),
+                "Ship worker must not use raw server names with dots in denial globs");
+    }
+
+    @Test
+    void shipWorkerNotGeneratedWhenExternalServerCollidesWithBuiltin() throws Exception {
+        InitContext ctx = createContext();
+        new OpenCodeGenerator().generate(ctx);
+
+        Path configFile = tempDir.resolve("opencode.json");
+        com.fasterxml.jackson.databind.node.ObjectNode config
+                = (com.fasterxml.jackson.databind.node.ObjectNode) new ObjectMapper().readTree(configFile.toFile());
+        com.fasterxml.jackson.databind.node.ObjectNode external = new ObjectMapper().createObjectNode();
+        external.put("type", "remote");
+        external.put("url", "https://example.test/external");
+        ((com.fasterxml.jackson.databind.node.ObjectNode) config.path("mcp")).set("external", external);
+        Files.writeString(configFile, new ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(config));
+
+        new OpenCodeGenerator().generate(ctx);
+
+        Path workerFile = tempDir.resolve(".opencode/agents/camel-ship-worker.md");
+        assertFalse(Files.exists(workerFile),
+                "Ship worker must not be generated when an MCP server collides with a built-in permission prefix");
+        assertTrue(Files.exists(tempDir.resolve(".opencode/agents/brainstormer.md")),
+                "Other agent definitions must still be generated");
+    }
+
+    @Test
+    void shipWorkerDeletedOnReInitWhenCollisionAppears() throws Exception {
+        InitContext ctx = createContext();
+        new OpenCodeGenerator().generate(ctx);
+
+        Path workerFile = tempDir.resolve(".opencode/agents/camel-ship-worker.md");
+        assertTrue(Files.exists(workerFile), "Worker must exist after initial generation");
+
+        Path configFile = tempDir.resolve("opencode.json");
+        com.fasterxml.jackson.databind.node.ObjectNode config
+                = (com.fasterxml.jackson.databind.node.ObjectNode) new ObjectMapper().readTree(configFile.toFile());
+        com.fasterxml.jackson.databind.node.ObjectNode external = new ObjectMapper().createObjectNode();
+        external.put("type", "remote");
+        external.put("url", "https://example.test/external");
+        ((com.fasterxml.jackson.databind.node.ObjectNode) config.path("mcp")).set("external", external);
+        Files.writeString(configFile, new ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(config));
+
+        new OpenCodeGenerator().generate(ctx);
+
+        assertFalse(Files.exists(workerFile),
+                "Ship worker must be deleted on re-init when collision is detected");
+    }
+
+    @Test
+    void shipWorkerDeniesNativeFormatServers() throws Exception {
+        InitContext ctx = createContext();
+
+        Files.writeString(tempDir.resolve("opencode.json"), """
+                {
+                  "mcp": {
+                    "servers": {
+                      "probe": {"type": "local", "command": ["echo"], "enabled": true},
+                      "scanner": {"type": "local", "command": ["echo"], "enabled": true}
+                    }
+                  }
+                }
+                """);
+
+        new OpenCodeGenerator().generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("probe_*: deny"),
+                "Ship worker must deny servers declared in native mcp.servers format");
+        assertTrue(worker.contains("scanner_*: deny"),
+                "Ship worker must deny all servers from native mcp.servers container");
+    }
+
+    @Test
+    void shipWorkerUsesAsciiOnlyNormalization() throws Exception {
+        assertEquals("caf_", OpenCodeGenerator.normalizeServerName("café"),
+                "Non-ASCII letters must be replaced with underscore");
+        assertEquals("probe_local", OpenCodeGenerator.normalizeServerName("probe.local"),
+                "Dots must be replaced with underscore");
+        assertEquals("my-server", OpenCodeGenerator.normalizeServerName("my-server"),
+                "Hyphens must be preserved");
+        assertEquals("__", OpenCodeGenerator.normalizeServerName("üñ"),
+                "All non-ASCII characters must be replaced");
+    }
+
+    @Test
+    void shipWorkerDeniesServersFromAncestorConfig() throws Exception {
+        Path projectDir = tempDir.resolve("project");
+        Files.createDirectories(projectDir);
+        Files.writeString(tempDir.resolve("opencode.json"), """
+                {
+                  "mcp": {
+                    "ancestor-probe": {"type": "local", "command": ["echo"], "enabled": true}
+                  }
+                }
+                """);
+
+        AgentConfig agent = AgentRegistry.get("opencode");
+        String agentBaseFolder = agent.folder().substring(0, agent.folder().lastIndexOf("/"));
+        InitContext ctx = new InitContext(
+                agent, "opencode",
+                projectDir.resolve(agent.folder()),
+                projectDir.resolve(agentBaseFolder + "/skills"),
+                projectDir,
+                "camel-kit", DistributionConfig.loadFromClasspathOrDefaults(),
+                true, Printer.noop());
+
+        new OpenCodeGenerator().generate(ctx);
+
+        String worker = Files.readString(
+                projectDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("ancestor-probe_*: deny"),
+                "Ship worker must deny MCP servers inherited from ancestor config");
+    }
+
+    @Test
+    void shipWorkerDeniesServersFromGlobalConfig() throws Exception {
+        Path globalDir = tempDir.resolve("fake-global");
+        Files.createDirectories(globalDir);
+        Files.writeString(globalDir.resolve("opencode.json"), """
+                {
+                  "mcp": {
+                    "global-probe": {"type": "local", "command": ["echo"], "enabled": true}
+                  }
+                }
+                """);
+
+        OpenCodeGenerator gen = new OpenCodeGenerator() {
+            @Override
+            Path globalConfigDir() {
+                return globalDir;
+            }
+        };
+        InitContext ctx = createContext();
+        gen.generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("global-probe_*: deny"),
+                "Ship worker must deny MCP servers from global config");
+    }
+
+    @Test
+    void shipWorkerDeniesServersFromExplicitConfig() throws Exception {
+        Path explicitFile = tempDir.resolve("explicit-opencode.json");
+        Files.writeString(explicitFile, """
+                {
+                  "mcp": {
+                    "explicit-probe": {"type": "local", "command": ["echo"], "enabled": true}
+                  }
+                }
+                """);
+
+        OpenCodeGenerator gen = new OpenCodeGenerator() {
+            @Override
+            Path explicitConfigFile() {
+                return explicitFile;
+            }
+        };
+        InitContext ctx = createContext();
+        gen.generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("explicit-probe_*: deny"),
+                "Ship worker must deny MCP servers from OPENCODE_CONFIG");
+    }
+
+    @Test
+    void shipWorkerDeniesServersFromInlineConfigContent() throws Exception {
+        String inlineJson = """
+                {
+                  "mcp": {
+                    "inline-probe": {"type": "local", "command": ["echo"], "enabled": true}
+                  }
+                }
+                """;
+
+        OpenCodeGenerator gen = new OpenCodeGenerator() {
+            @Override
+            String inlineConfigContent() {
+                return inlineJson;
+            }
+        };
+        InitContext ctx = createContext();
+        gen.generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("inline-probe_*: deny"),
+                "Ship worker must deny MCP servers from OPENCODE_CONFIG_CONTENT");
+    }
+
+    @Test
+    void shipWorkerDeniesNativeFormatServerNamedType() throws Exception {
+        InitContext ctx = createContext();
+
+        Files.writeString(tempDir.resolve("opencode.json"), """
+                {
+                  "mcp": {
+                    "servers": {
+                      "type": {"type": "local", "command": ["echo"], "enabled": true},
+                      "probe": {"type": "local", "command": ["echo"], "enabled": true}
+                    }
+                  }
+                }
+                """);
+
+        new OpenCodeGenerator().generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("type_*: deny"),
+                "Ship worker must deny a native server named 'type'");
+        assertTrue(worker.contains("probe_*: deny"),
+                "Ship worker must deny other servers in the same native container");
+    }
+
+    @Test
+    void shipWorkerDeniesServersFromCustomConfigDir() throws Exception {
+        Path customDir = tempDir.resolve("fake-custom-dir");
+        Files.createDirectories(customDir);
+        Files.writeString(customDir.resolve("opencode.json"), """
+                {
+                  "mcp": {
+                    "custom-dir-probe": {"type": "local", "command": ["echo"], "enabled": true}
+                  }
+                }
+                """);
+
+        OpenCodeGenerator gen = new OpenCodeGenerator() {
+            @Override
+            Path customConfigDir() {
+                return customDir;
+            }
+        };
+        InitContext ctx = createContext();
+        gen.generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("custom-dir-probe_*: deny"),
+                "Ship worker must deny MCP servers from OPENCODE_CONFIG_DIR");
+    }
+
+    @Test
+    void shipWorkerDeniesServersFromManagedConfig() throws Exception {
+        Path managedDir = tempDir.resolve("fake-managed");
+        Files.createDirectories(managedDir);
+        Files.writeString(managedDir.resolve("opencode.json"), """
+                {
+                  "mcp": {
+                    "managed-probe": {"type": "local", "command": ["echo"], "enabled": true}
+                  }
+                }
+                """);
+
+        OpenCodeGenerator gen = new OpenCodeGenerator() {
+            @Override
+            Path managedConfigDir() {
+                return managedDir;
+            }
+        };
+        InitContext ctx = createContext();
+        gen.generate(ctx);
+
+        String worker = Files.readString(
+                tempDir.resolve(".opencode/agents/camel-ship-worker.md"));
+        assertTrue(worker.contains("managed-probe_*: deny"),
+                "Ship worker must deny MCP servers from platform managed config");
+    }
+
+    @Test
+    void shipWorkerNotGeneratedWhenServerNameHasEnvSubstitution() throws Exception {
+        OpenCodeGenerator gen = new OpenCodeGenerator() {
+            @Override
+            String inlineConfigContent() {
+                return """
+                        {
+                          "mcp": {
+                            "{env:MY_MCP_SERVER}": {"type": "local", "command": ["echo"]}
+                          }
+                        }
+                        """;
+            }
+        };
+        InitContext ctx = createContext();
+        gen.generate(ctx);
+
+        Path workerFile = tempDir.resolve(".opencode/agents/camel-ship-worker.md");
+        assertFalse(Files.exists(workerFile),
+                "Ship worker must not be generated when server names contain unresolved env substitutions");
+    }
+
+    @Test
+    void shipWorkerNotGeneratedWhenServerNameHasFileSubstitution() throws Exception {
+        OpenCodeGenerator gen = new OpenCodeGenerator() {
+            @Override
+            String inlineConfigContent() {
+                return """
+                        {
+                          "mcp": {
+                            "{file:server-name.txt}": {"type": "local", "command": ["echo"]}
+                          }
+                        }
+                        """;
+            }
+        };
+        InitContext ctx = createContext();
+        gen.generate(ctx);
+
+        Path workerFile = tempDir.resolve(".opencode/agents/camel-ship-worker.md");
+        assertFalse(Files.exists(workerFile),
+                "Ship worker must not be generated when server names contain unresolved file substitutions");
+    }
+
+    @Test
+    void shipWorkerGeneratedWhenSubstitutionInProjectConfig() throws Exception {
+        InitContext ctx = createContext();
+        new OpenCodeGenerator().generate(ctx);
+
+        Path configFile = tempDir.resolve("opencode.json");
+        com.fasterxml.jackson.databind.node.ObjectNode config
+                = (com.fasterxml.jackson.databind.node.ObjectNode) new ObjectMapper().readTree(configFile.toFile());
+        com.fasterxml.jackson.databind.node.ObjectNode probe = new ObjectMapper().createObjectNode();
+        probe.put("type", "local");
+        probe.set("command", new ObjectMapper().createArrayNode().add("echo"));
+        ((com.fasterxml.jackson.databind.node.ObjectNode) config.path("mcp"))
+                .set("{env:DYNAMIC_SERVER}", probe);
+        Files.writeString(configFile, new ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(config));
+
+        new OpenCodeGenerator().generate(ctx);
+
+        Path workerFile = tempDir.resolve(".opencode/agents/camel-ship-worker.md");
+        assertFalse(Files.exists(workerFile),
+                "Ship worker must not be generated when project config has unresolved substitution");
     }
 }
