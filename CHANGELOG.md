@@ -37,12 +37,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-findings, triage dispositions, maintainer answers and verification items) as the additive
   sub-project expansion of the Apache Camel Security Model, and the derived `docs/security-model.yaml` sidecar
   for automated triage. README, CONTRIBUTING, CLAUDE.md and a GitHub issue-template contact link point to them.
+- **OpenCode native Ship (#99)** — eligible sessions relay controller-issued stages through a dedicated
+  `camel-ship-worker` agent via OpenCode's `subagent` tool (`agent` argument). The worker denies `edit`, `write`,
+  `bash`, `notebook`, `subagent` and `mcp`, and inherits read access, per-path restrictions and external-directory
+  authorization from the parent session. Because `mcp: deny` does not match individual MCP actions, init derives
+  `<server>_*: deny` rules for every MCP server in the effective configuration (project layers, ancestor
+  directories, global, `OPENCODE_CONFIG`, `OPENCODE_CONFIG_DIR`, `OPENCODE_CONFIG_CONTENT` and the platform managed
+  directory), using OpenCode's ASCII name normalization. When that inventory cannot be established — an
+  `{env:}`/`{file:}` substitution or unparsable source, a server named like a built-in permission (`external`), or
+  macOS managed preferences — the worker is not generated, any previous worker is removed (including when
+  initialization is rejected because the project config is unparsable or has duplicate keys, which OpenCode may still
+  load), and the Ship skill falls back to CLI mode. Cleanup never follows a symlinked `.opencode/agents` directory.
+  `--backend opencode-native` reuses the native task/result, recovery, oversight and deterministic publication
+  contract. Fresh and regenerated workspaces receive the native skill, worker and command stub; runs retain their
+  recorded host.
 - **OpenAI Codex CLI native Ship (#225)** — eligible sessions relay controller-issued stages through the dedicated
   `camel_ship_worker` custom agent with `sandbox_mode = "read-only"` and instruction-level restrictions.
   `--backend codex-native` reuses the native task/result, recovery, oversight and deterministic publication contract
   while preserving Codex CLI sandbox, approval policies and existing session permissions. Host-enforced tool restriction
   depends on the Codex CLI version. Fresh and regenerated workspaces receive the native skill and worker; runs retain
   their recorded host.
+- **Pi execution and run-state compatibility verification (#100)** — focused non-regression tests confirm
+  that Pi runs reject native backends on resume, round-trip `executionMode: PI` through the store, preserve
+  Pi execution mode across the full coordinator lifecycle (run, resume, abort, recovery, interruption), and
+  that the Pi Ship skill contains no native dispatch language. `ShipStageResult.parse()` now extracts JSON
+  from markdown code fences as a fallback, handling Pi 0.84.2 wrapping stage output in prose despite the
+  prompt instruction to return raw JSON. Live Pi certification passed on Linux aarch64 with Pi 0.84.2 and
+  Node 22.22.2 (all five stages, single attempts, Stamp PASS).
 
 ### Changed
 

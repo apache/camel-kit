@@ -5,9 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,6 +26,7 @@ import org.apache.camel.kit.workflow.WorkflowManifestLoader;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.tomlj.Toml;
@@ -318,6 +321,25 @@ class ResourceConsistencyTest {
         }
 
         assertTrue(unknown.isEmpty(), "Shipped guidance references unknown MCP tools:\n" + String.join("\n", unknown));
+    }
+
+    @Test
+    void securityModelSidecarRetainsIssueReferencesAndDecisions() throws IOException {
+        JsonNode model = new ObjectMapper(new YAMLFactory())
+                .readTree(repositoryRoot().resolve("docs/security-model.yaml").toFile());
+        Map<String, JsonNode> properties = new HashMap<>();
+        model.path("claimed_properties").forEach(property -> properties.put(property.path("id").asText(), property));
+        JsonNode p5 = properties.get("P5");
+        JsonNode p10 = properties.get("P10");
+        assertTrue(model.path("status").asText().contains("#153-#158"));
+        assertTrue(p5.path("provenance").asText().contains("2026-10-27 (Q8)"));
+        assertTrue(p10.path("violation_symptom").asText().contains("review of #6"));
+        assertTrue(p10.path("provenance").asText().contains("accepted posture"));
+        assertTrue(model.path("maintainer_decisions").get(0).path("decision").asText()
+                .contains("a demonstrated breach through the grant is triaged on the breach and its impact"));
+        assertTrue(model.path("maintainer_decisions").get(3).path("decision").asText()
+                .contains("Pi candidates are accepted"));
+        assertTrue(model.path("verification_items").get(5).path("work").asText().contains("#143"));
     }
 
     @Test
@@ -1276,6 +1298,48 @@ class ResourceConsistencyTest {
         assertTrue(migration.contains("./mvnw -f [MODULE_DIR]pom.xml dependency:tree"));
         assertTrue(migration.contains("./mvnw -f [MODULE_DIR]pom.xml -DskipTests compile"));
         assertTrue(implement.contains("`guides/maven-dependencies.md` | Spring Boot/Quarkus only"));
+    }
+
+    @Test
+    void mainRunScriptPinsTheProjectCamelVersion() throws IOException {
+        Path root = repositoryRoot().resolve("kit/camel-kit-core/src/main/resources/skills");
+        String runScript = Files.readString(root.resolve("camel-implement/guides/run-script.md"));
+        String orchestrator = Files.readString(root.resolve("camel-implement/guides/orchestrator.md"));
+        String greenfield = Files.readString(root.resolve("camel-plan/guides/task-template-greenfield.md"));
+
+        String pin = "--camel-version={project.camelVersion}";
+        assertTrue(runScript.contains("`project.camelVersion`"));
+        assertTrue(runScriptCommand(runScript).contains(pin), "run.sh template must pin the project version");
+
+        // Installation resolves {UPPER_CASE} tokens to the distribution defaults; the project-context token must
+        // survive it even when the distribution version differs from the project version.
+        Path installed = tempDir.resolve("run-script-installed.md");
+        Files.writeString(installed, runScript);
+        new VersionPlaceholderResolver().substitute(installed, DistributionConfig.loadFromClasspathOrDefaults(),
+                "camel kit");
+        String installedGuide = Files.readString(installed);
+        assertTrue(installedGuide.contains(pin), "installed guide must keep the project-context token");
+        assertTrue(runScriptCommand(installedGuide).contains(pin), "installed run.sh template must keep the pin");
+        assertFalse(installedGuide.contains("--camel-version="
+                                            + DistributionConfig.loadFromClasspathOrDefaults().camelMainVersion()));
+
+        // Removing the flag from the executable block must fail even though the rules table still mentions it.
+        String withoutFlag = runScript.replace("  " + pin + " \\\n", "");
+        assertNotEquals(runScript, withoutFlag);
+        assertFalse(runScriptCommand(withoutFlag).contains(pin));
+        assertTrue(orchestrator.contains("`MODULE_DIR`, `CAMEL_VERSION`, `ROUTE_FILES`"));
+        assertTrue(greenfield.contains("--camel-version=[CAMEL_VERSION]"));
+    }
+
+    /** Returns the fenced bash block that holds the executable {@code jbang camel@apache/camel run} command. */
+    private static String runScriptCommand(String guide) {
+        Matcher block = Pattern.compile("```bash\\n(.*?)```", Pattern.DOTALL).matcher(guide);
+        while (block.find()) {
+            if (block.group(1).contains("jbang camel@apache/camel run")) {
+                return block.group(1);
+            }
+        }
+        return fail("run.sh bash block not found");
     }
 
     @Test
