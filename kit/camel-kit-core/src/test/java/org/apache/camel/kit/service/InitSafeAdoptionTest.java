@@ -147,6 +147,110 @@ class InitSafeAdoptionTest {
         assertEquals(before, snapshot(project));
     }
 
+    static List<String> unmergeableCodexConfigs() {
+        return List.of(
+                "model = [\n",
+                "[mcp_servers.camel]\ncommand = \"custom\"\n",
+                "# BEGIN CAMEL-KIT MANAGED MCP SERVERS\nmodel = \"x\"\n",
+                // A valid block does not excuse a managed server defined outside it.
+                "[mcp_servers.camel]\ncommand = \"custom\"\n\n# BEGIN CAMEL-KIT MANAGED MCP SERVERS\n"
+                                                                          + "[mcp_servers.camel-knowledge]\ncommand = \"old-knowledge\"\n"
+                                                                          + "# END CAMEL-KIT MANAGED MCP SERVERS\n",
+                // Valid on their own, but the managed tables cannot be added to them.
+                "mcp_servers = {}\n",
+                "mcp_servers = \"none\"\n");
+    }
+
+    @ParameterizedTest
+    @MethodSource("unmergeableCodexConfigs")
+    void unmergeableCodexConfigIsRejectedByPreviewAndInitBeforeAnyProjectWrites(String content) throws Exception {
+        Path project = tempDir.resolve("orders");
+        Path config = Files.createDirectories(project.resolve(".codex")).resolve("config.toml");
+        Files.writeString(config, content);
+        List<String> before = snapshot(project);
+
+        InvalidAgentConfigurationException previewError = assertThrows(InvalidAgentConfigurationException.class,
+                () -> new InitService().preview(request(project, "codex")));
+        assertEquals(before, snapshot(project));
+
+        InvalidAgentConfigurationException initError = assertThrows(InvalidAgentConfigurationException.class,
+                () -> new InitService().initialize(request(project, "codex")));
+        assertEquals(before, snapshot(project));
+        assertEquals(previewError.getMessage(), initError.getMessage());
+        assertTrue(initError.getMessage().contains(".codex/config.toml"), initError.getMessage());
+    }
+
+    @Test
+    void codexConfigThatIsNotARegularFileIsRejectedByPreviewAndInitBeforeAnyProjectWrites() throws Exception {
+        Path project = tempDir.resolve("orders");
+        Files.createDirectories(project.resolve(".codex/config.toml"));
+        List<String> before = snapshot(project);
+
+        InvalidAgentConfigurationException previewError = assertThrows(InvalidAgentConfigurationException.class,
+                () -> new InitService().preview(request(project, "codex")));
+        InvalidAgentConfigurationException initError = assertThrows(InvalidAgentConfigurationException.class,
+                () -> new InitService().initialize(request(project, "codex")));
+
+        assertEquals(before, snapshot(project));
+        assertEquals(previewError.getMessage(), initError.getMessage());
+        assertTrue(initError.getMessage().contains("must be a regular file"), initError.getMessage());
+    }
+
+    @Test
+    void reinitializationOfCodexReplacesTheManagedBlockAndPassesPreview() throws Exception {
+        Path project = tempDir.resolve("orders");
+        new InitService().initialize(request(project, "codex"));
+        Path config = project.resolve(".codex/config.toml");
+        String first = Files.readString(config);
+
+        new InitService().preview(request(project, "codex"));
+        new InitService().initialize(request(project, "codex"));
+
+        assertEquals(first, Files.readString(config));
+    }
+
+    @Test
+    void validCodexConfigIsAcceptedByPreviewAndMergedByInit() throws Exception {
+        Path project = tempDir.resolve("orders");
+        Path config = Files.createDirectories(project.resolve(".codex")).resolve("config.toml");
+        String existing = "model_reasoning_effort = \"high\"\n\n[mcp_servers.other]\ncommand = \"other-mcp\"\n";
+        Files.writeString(config, existing);
+        List<String> before = snapshot(project);
+
+        List<ManagedFiles.Change> preview = new InitService().preview(request(project, "codex"));
+
+        assertEquals(before, snapshot(project));
+        assertTrue(preview.stream().anyMatch(
+                change -> change.path().equals(".codex/config.toml") && change.action() == Action.MERGE),
+                preview.toString());
+
+        new InitService().initialize(request(project, "codex"));
+
+        String merged = Files.readString(config);
+        assertTrue(merged.startsWith(existing), merged);
+        assertTrue(merged.contains("[mcp_servers.camel]"), merged);
+    }
+
+    @Test
+    void preservedWrapperIsReportedWithoutAProposedCopy() throws Exception {
+        Path project = tempDir.resolve("orders");
+        Files.createDirectories(project);
+        Files.writeString(project.resolve("mvnw"), "#!/bin/sh\n# team wrapper\n");
+
+        InitResult result = new InitService().initialize(request(project, "claude"));
+
+        assertEquals("#!/bin/sh\n# team wrapper\n", Files.readString(project.resolve("mvnw")));
+        ManagedFiles.Change conflict = result.conflicts().stream()
+                .filter(change -> change.path().equals("mvnw")).findFirst().orElseThrow();
+        assertNull(conflict.proposal());
+        assertFalse(Files.exists(project.resolve(ManagedFiles.PROPOSALS).resolve("mvnw")));
+        // No partial wrapper is assembled around the project's own file, in the project or as a proposal.
+        for (String other : List.of("mvnw.cmd", ".mvn/wrapper/maven-wrapper.properties")) {
+            assertFalse(Files.exists(project.resolve(other)), other);
+            assertFalse(Files.exists(project.resolve(ManagedFiles.PROPOSALS).resolve(other)), other);
+        }
+    }
+
     @Test
     void reinitializationPreservesUserEditsAndRefreshesUntouchedFiles() throws Exception {
         Path project = tempDir.resolve("orders");
