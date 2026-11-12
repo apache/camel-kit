@@ -251,14 +251,21 @@ public class InitCommand extends CamelKitCommand {
         printer().println("  " + yellow("\u26A0") + bold("  Existing files preserved"));
         printer().println(dim("  Not written by Camel Kit, or changed since, so left as they are:"));
         for (ManagedFiles.Change conflict : result.conflicts()) {
+            // Only the Maven wrapper is preserved without a proposal: it is never assembled from mixed files.
             String proposal = conflict.proposal() == null
-                    ? ""
+                    ? dim("  \u2190 kept as is, no Camel Kit version saved")
                     : dim("  \u2190 Camel Kit version: ")
                       + result.targetDir().relativize(conflict.proposal()).toString().replace('\\', '/');
             printer().println("     " + cyan(conflict.path()) + proposal);
         }
-        printer().println(dim("  Merge the Camel Kit version by hand, or replace a file with ")
-                          + bold("--force --replace <path>"));
+        if (result.conflicts().stream().anyMatch(conflict -> conflict.proposal() != null)) {
+            printer().println(dim("  Merge the Camel Kit version by hand, or replace a file with ")
+                              + bold("--force --replace <path>"));
+        }
+        if (result.conflicts().stream().anyMatch(conflict -> conflict.proposal() == null)) {
+            printer().println(dim("  To replace the whole Maven wrapper, use ")
+                              + bold("--force --replace-wrapper"));
+        }
         printer().println();
     }
 

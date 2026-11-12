@@ -11,6 +11,7 @@ import org.apache.camel.kit.config.DistributionConfig;
 import org.apache.camel.kit.util.AnsiColors;
 import org.apache.camel.kit.util.TemplateUtils;
 import org.apache.camel.kit.workflow.WorkflowManifest;
+import org.apache.camel.kit.workflow.WorkflowManifestLoader;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,10 +30,7 @@ class McpConfigGenerator {
                 Files.createDirectories(configFile.getParent());
             }
 
-            QuteTemplateEngine qute = new QuteTemplateEngine();
-            String template = TemplateUtils.readTemplate(ctx.agent().mcpConfigTemplatePath());
-            String processed
-                    = qute.renderString(template, templateData(ctx.distribution(), workflow, ctx.withCitrusMcp()));
+            String processed = render(ctx, workflow);
             if ("toml".equals(ctx.agent().mcpConfigFormat())) {
                 new CodexConfigMerger().merge(configFile, processed, ctx.withCitrusMcp());
             } else if ("opencode".equals(ctx.agentName())) {
@@ -82,13 +80,26 @@ class McpConfigGenerator {
     }
 
     /**
-     * Validates the JSON MCP config a generator will merge into, so an unusable file fails before anything is written.
+     * Validates the MCP config a generator will merge into, so an unusable file fails before anything is written. Reads
+     * only, so a preview runs the same checks. OpenCode validates its own configuration files.
      */
-    static void preflight(InitContext ctx) throws InvalidAgentConfigurationException {
-        if (!"toml".equals(ctx.agent().mcpConfigFormat()) && !"opencode".equals(ctx.agentName())) {
+    static void preflight(InitContext ctx) throws IOException {
+        if ("toml".equals(ctx.agent().mcpConfigFormat())) {
+            // The merge itself is checked, with the block initialization will write, not only the existing file.
+            new CodexConfigMerger().validate(
+                    ctx.projectDir().resolve(ctx.agent().mcpConfigPath()),
+                    render(ctx, WorkflowManifestLoader.loadDefault()), ctx.withCitrusMcp());
+        } else if (!"opencode".equals(ctx.agentName())) {
             readJsonConfig(ctx.projectDir().resolve(ctx.agent().mcpConfigPath()), ctx.agent().name(),
                     ctx.agent().mcpServerContainerKey());
         }
+    }
+
+    /** The MCP configuration Camel-Kit generates for this agent, before it is merged into an existing file. */
+    private static String render(InitContext ctx, WorkflowManifest workflow) throws IOException {
+        String template = TemplateUtils.readTemplate(ctx.agent().mcpConfigTemplatePath());
+        return new QuteTemplateEngine()
+                .renderString(template, templateData(ctx.distribution(), workflow, ctx.withCitrusMcp()));
     }
 
     static ObjectNode readJsonConfig(Path configFile, String agent, String key)
@@ -116,7 +127,7 @@ class McpConfigGenerator {
         }
     }
 
-    private Map<String, Object> templateData(
+    private static Map<String, Object> templateData(
             DistributionConfig dist, WorkflowManifest workflow, boolean withCitrusMcp)
             throws IOException {
         Map<String, Object> data = new java.util.HashMap<>(

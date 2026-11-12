@@ -167,7 +167,9 @@ Camel-Kit owns only the block between its `CAMEL-KIT-MANAGED-BLOCK` markers: ini
 file and later replaces only that block. An existing `docs/constitution.md`, `.claude/settings.json`, `.qwenignore`,
 `.bob/custom_modes.yaml` or Maven wrapper that Camel-Kit did not write, or that you changed afterwards, is left
 untouched and listed at the end of the run; the version Camel-Kit would have written is saved under
-`.camel-kit/conflicts/`. Pass `--replace <path>` to replace a file in full, or `--dry-run` to preview. Shipped
+`.camel-kit/conflicts/`, except for Maven wrapper files, which are listed without a saved version; use
+`--replace-wrapper` to replace the whole wrapper. Pass `--replace <path>` to replace a file in full, or `--dry-run` to preview;
+the preview runs the same validation as init and rejects an existing MCP configuration that cannot be merged. Shipped
 skills and other `camel-*` assets are always regenerated.
 
 **TUI experience:**

@@ -176,6 +176,12 @@ class InitCommandTest {
         assertTrue(Files.isDirectory(project.resolve(".camel-kit")));
         assertTrue(printer.output().contains("Existing files preserved"), printer.output());
         assertTrue(printer.output().contains("mvnw"), printer.output());
+        // The wrapper has no proposed copy, so the report points to whole-wrapper replacement instead of a merge.
+        assertTrue(printer.output().lines().anyMatch(
+                line -> line.contains("mvnw") && line.contains("no Camel Kit version saved")), printer.output());
+        assertTrue(printer.output().contains("--replace-wrapper"), printer.output());
+        assertFalse(printer.output().contains("Merge the Camel Kit version by hand"), printer.output());
+        assertFalse(Files.exists(project.resolve(".camel-kit/conflicts/mvnw")));
     }
 
     @Test

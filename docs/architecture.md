@@ -918,9 +918,13 @@ that decides what happens to them:
   line-ending differences so a checkout that converts them does not look like an edit. A project without a Maven
   wrapper gets the complete one; once any wrapper file is the project's own, no further wrapper file is added and
   only files named for replacement are written. Preview and execution share that plan.
-- A preserved file is reported and the generated version is saved under `.camel-kit/conflicts/`. `--replace <path>`
-  rewrites one shared file in full; `--dry-run` reports the outcome per file without writing.
-- Existing JSON MCP configurations are merged, not replaced.
+- A preserved file is reported and the generated version is saved under `.camel-kit/conflicts/`. A preserved Maven
+  wrapper file is the exception: it is reported without a saved version, so no partial wrapper is offered for
+  merging; `--replace-wrapper` replaces the whole wrapper. `--replace <path>` rewrites one shared file in full;
+  `--dry-run` reports the outcome per file without writing.
+- Existing MCP configurations, JSON and `.codex/config.toml`, are merged, not replaced. One that cannot
+  be merged is rejected before anything is written, by `--dry-run` as well as by initialization; for Codex both build
+  and validate the same merged candidate.
 
 Assets Camel-Kit ships under its own names (`camel-*` skills, subagents, personas, hooks, `.camel-kit/templates/`) are
 not tracked and are always regenerated. This keeps reinitialization able to restore the restricted Ship worker
