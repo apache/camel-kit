@@ -561,8 +561,10 @@ violation warrants coordinated disclosure and a CVE; **hardening** means it is f
    shared-guide and template subtrees before writing. `ConfinedPaths` refuses links in these managed
    paths; unrelated worktrees, custom skills and existing data may contain links. Catalog retirement reads
    the previous installation's SHA-256 records only for valid resource or stub paths under the selected
-   agent's generated directories. It checks confinement and content before deleting a regular file and
-   removes only empty parent directories below those roots. New atomic writes
+   agent's generated directories. The committed ledger supplies the ownership claim. Review its changes along
+   with the files it tracks. Kit checks confinement and compares installed content before removal, normalizing
+   LF and CRLF for recognized UTF-8 text and comparing opaque resources byte for byte. Layout replacements
+   displace only recorded, matching files and their directories. Other retirements prune only empty parents. New atomic writes
    use umask-default permissions and replacements retain existing POSIX modes.
    Explicitly selected target aliases remain supported. Catalog, Citrus and Forage validate version
    components; Citrus and Forage also validate cache ancestry; Citrus also checks extracted paths and derived reference destinations.

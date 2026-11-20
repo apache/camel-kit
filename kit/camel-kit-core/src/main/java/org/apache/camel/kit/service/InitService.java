@@ -72,7 +72,7 @@ public class InitService {
             shared.add(targetDir.resolve(template.target()));
         }
         shared.add(targetDir.resolve("docs/constitution.md"));
-        List<ManagedFiles.Change> changes = new ArrayList<>(files.catalogRetirements(genCtx));
+        List<ManagedFiles.Change> changes = new ArrayList<>(files.planCatalog(genCtx).retirements());
         for (Path file : shared) {
             if (files.isShared(file)) {
                 changes.add(change(targetDir, file, files.plan(file)));
@@ -153,7 +153,7 @@ public class InitService {
         AgentGenerator generator = AgentGeneratorFactory.create(request.agentName());
         requireConfinedOutputs(targetDir, genCtx, isExistingProject);
         generator.preflight(genCtx);
-        var retired = files.catalogRetirements(genCtx);
+        var catalog = files.planCatalog(genCtx);
 
         List<Path> createdPaths = new ArrayList<>();
         List<InitWarning> warnings = new ArrayList<>();
@@ -173,8 +173,7 @@ public class InitService {
             progress.finishTask();
 
             progress.startTask("\uD83E\uDD16", "Generating " + agent.name() + " workspace");
-            files.retireCatalogFiles(genCtx, retired);
-            generator.generate(genCtx);
+            catalog.generate(generator);
             files.recordCatalogFiles(genCtx);
             progress.finishTask();
 

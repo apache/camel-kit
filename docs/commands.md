@@ -72,7 +72,7 @@ camel kit init --here [options]
 | `--source-platform` | `auto` | Source platform for migration: `mulesoft`, `camel`, `biztalk`, `auto` |
 | `--force` | `false` | Reinitialize a project that already has `.camel-kit/`. Your content in shared files is kept |
 | `--replace <path>` | none | Replace one existing shared file in full (for example `AGENTS.md` or `mvnw`) instead of merging or preserving it; repeatable |
-| `--dry-run` | `false` | Show what init would do to each shared file (create, replace, merge or preserve) without writing anything |
+| `--dry-run` | `false` | Preview which shared files init would create, replace, merge or preserve and which retired catalog files it would remove or preserve |
 | `--silent` | `false` | Suppress all output (no banner, no TUI, no progress, no summary) -- useful for CI/scripted environments |
 | `-V`, `--version` | -- | Print camel-kit version and exit |
 
@@ -158,7 +158,7 @@ If the target directory already contains `.camel-kit/`, init warns and exits:
   Directory: /path/to/my-integration
   Found:     .camel-kit/
 
-  To reinitialize: --force (files you changed are preserved)
+  To reinitialize: --force (refreshes selected assets and preserves edits to shared files)
   Example:      camel-kit init my-integration --ai claude --force
 ```
 
@@ -172,7 +172,9 @@ untouched and listed at the end of the run; the version Camel-Kit would have wri
 the preview runs the same validation as init and rejects an existing MCP configuration that cannot be merged. Shipped
 skills and other selected `camel-*` assets are regenerated. When switching distributions, `init --force` removes
 recorded skills, guides and command stubs that the new catalog omits and that still match the last installation.
-Edited and untracked files are preserved. The dry run lists the planned removals.
+Run init for each assistant installation you want to update. Codex and Antigravity share the same skills directory.
+A retained `SKILL.md` remains discoverable. Review edited and unrecorded skills and move or remove those you want to retire.
+The dry run lists the planned removals.
 
 **TUI experience:**
 

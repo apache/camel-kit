@@ -928,9 +928,12 @@ that decides what happens to them:
   be merged is rejected before anything is written, by `--dry-run` as well as by initialization; for Codex both build
   and validate the same merged candidate.
 
-Assets Camel-Kit ships under its own names (`camel-*` skills, subagents, personas, hooks, `.camel-kit/templates/`) are
-not tracked and are always regenerated. This keeps reinitialization able to restore the restricted Ship worker
-definitions regardless of local edits. Files the user adds next to them are never visited.
+Each run regenerates the selected skills, subagents, personas, hooks and `.camel-kit/templates/`, including the
+restricted Ship worker definitions. The ledger also records the final content of catalog skills, guides and
+command stubs. On a catalog switch, init checks the old records in the selected host directories before retiring
+files. Text hashes normalize LF and CRLF for the formats listed in the contributor guide. Opaque resources use
+SHA-256 of their exact bytes. An edited retired file keeps its record so later runs can report it. A switch
+between a file and a directory stages the new content and requires all files it displaces to match the ledger.
 
 Rejected alternatives:
 

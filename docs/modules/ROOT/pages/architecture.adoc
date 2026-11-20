@@ -85,6 +85,10 @@ A provider entry identifies a Java service and implementation for consumers. Ins
 the assistant. Executable provider dispatch and result verification are tracked in
 https://github.com/apache/camel-kit/issues/196[#196].
 
+The committed ownership ledger records the installed content after host-specific changes. A catalog switch retires
+matching files after generating the replacement assets. An owned file can become a directory of guides or a
+directory of owned guides can become one file. A project file in the way stops the switch during preview or init.
+
 The xref:contributing.adoc#skill-packs[working report-review pack] adds one check where `camel-validate` prepares its report.
 
 [[camel-yaml-guidance]]

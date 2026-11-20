@@ -54,7 +54,7 @@ public class DefaultGenerator implements AgentGenerator {
         for (WorkflowManifest.WorkflowCommand command : workflow.generatedCommandStubs()) {
             if (command.isSkillOnly(ctx.agentName())) {
                 GeneratedAssetCleaner.deleteRegularFile(
-                        ctx, ctx.commandsDir().resolve(command.name() + "." + ctx.agent().fileFormat()));
+                        ctx, ctx.commandStub(command.name()));
             }
         }
         generateBaseAssets(ctx, workflow);

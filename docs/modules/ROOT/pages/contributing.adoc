@@ -149,7 +149,9 @@ Kit generates the host visibility flags.
 
 | `resource/<skill-or-shared>/<path>`
 | Set `resource` to the bundled file. Its key determines its destination beneath the assistant's skills directory.
-Use `skill/<name>` for the top-level `SKILL.md`.
+Use `skill/<name>` for the top-level `SKILL.md`. On retirement, Kit ignores LF/CRLF differences in UTF-8
+`.md`, `.adoc`, `.txt`, `.yaml`, `.yml`, `.json`, `.xml`, `.toml` and `.properties` files.
+Other resources and files containing a NUL byte or invalid UTF-8 must match the recorded bytes exactly.
 
 | `step/<stage>/<step>/<name>`
 | Set `resource` to Markdown guidance or a check. The stage comes from the workflow manifest. Its skill must

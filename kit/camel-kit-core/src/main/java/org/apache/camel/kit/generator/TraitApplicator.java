@@ -26,7 +26,7 @@ class TraitApplicator {
 
         for (String skillName : skillNames) {
             String traitResourcePath = traitsBasePath + skillName + ".append.md";
-            Path targetSkillMd = ctx.skillsDir().resolve(skillName + "/SKILL.md");
+            Path targetSkillMd = ctx.skillFile(skillName + "/SKILL.md");
             if (appendTraitIfExists(traitResourcePath, targetSkillMd, ctx)) {
                 traitCount++;
             }
@@ -50,7 +50,7 @@ class TraitApplicator {
                 continue;
             }
             String traitResourcePath = traitDirPath + guideName + APPEND_TRAIT_SUFFIX;
-            Path targetGuide = ctx.skillsDir().resolve(guidePath);
+            Path targetGuide = ctx.skillFile(guidePath);
             if (appendTraitIfExists(traitResourcePath, targetGuide, ctx)) {
                 count++;
             }

@@ -8,7 +8,6 @@ import java.util.Map;
 
 import org.apache.camel.kit.config.AgentDescriptor;
 import org.apache.camel.kit.config.AgentRegistry;
-import org.apache.camel.kit.workflow.SkillCatalog;
 
 /**
  * Installs Antigravity's native project skills, custom agents, and MCP configuration.
@@ -44,13 +43,7 @@ public class AntigravityGenerator extends DefaultGenerator {
                 requireType(parent, true);
             }
         }
-        for (String path : SkillCatalog.bundled().paths()) {
-            Path target = ctx.skillsDir().resolve(path);
-            requireType(target, false);
-            for (Path parent = target.getParent(); !parent.equals(ctx.skillsDir()); parent = parent.getParent()) {
-                requireType(parent, true);
-            }
-        }
+        ctx.files().planCatalog(ctx);
         McpConfigGenerator.readAntigravityConfig(ctx.projectDir().resolve(ctx.agent().mcpConfigPath()));
     }
 

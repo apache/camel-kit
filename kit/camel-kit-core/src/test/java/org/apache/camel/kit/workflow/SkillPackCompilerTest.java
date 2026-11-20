@@ -7,9 +7,12 @@ import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -21,6 +24,7 @@ import org.apache.camel.kit.doc.FrontmatterHandler;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -187,8 +191,11 @@ class SkillPackCompilerTest {
         String paths = "`/docs/index.md`, `/camel-inspect/notes.md`, `/camel-inspect.md`, "
                        + "`/docs_config`, `https://example.org/docs` and `[notes](/docs)`.";
         String literal = paths + "\n[manual]: /camel-inspect?view=raw\n[section]: /camel-inspect#overview"
-                         + "\n[plain]: /camel-inspect\n[inline]( /camel-inspect) and /camel-inspect?view=raw";
-        String prose = "Run /docs, then /camel-inspect... **/camel-inspect**? |/docs| /docs<br> Try /docs?";
+                         + "\n[plain]: /camel-inspect\n[inline]( /camel-inspect) and /camel-inspect?view=raw"
+                         + "\n> [quoted]: /docs\n1. [ordered]: </docs>\n> - [nested]:\n>   /camel-inspect"
+                         + "\n`~/docs` and `/camel-inspect*.md`";
+        String prose
+                = "Run /docs, then /camel-inspect... **/camel-inspect**? |/docs| /docs<br> Try /docs? ~~ /docs ~~ and ~~/docs~~.";
         write("docs", "docs.md", SKILL.replace("camel-inspect", "docs") + prose + "\n" + literal + "\n");
         Path distribution = distribution(pack, "docs");
         Path workspace = Files.createDirectory(temp.resolve("workspace"));
@@ -314,15 +321,24 @@ class SkillPackCompilerTest {
     }
 
     @Test
+    @Tag("cli-compat")
     void reinitializationRemovesOnlyUnmodifiedFilesFromThePreviousCatalog() throws Exception {
         Path source = pack("optional", """
                 add:
                   skill/camel-optional: {contract: 1, resource: entry.md}
                   resource/camel-optional/guides/owned.md: {contract: 1, resource: guide.md}
                   resource/camel-optional/guides/edited.md: {contract: 1, resource: guide.md}
+                  resource/camel-optional/guides/example.yaml: {contract: 1, resource: example.yaml}
+                  resource/camel-optional/guides/legacy.md: {contract: 1, resource: legacy.md}
+                  resource/camel-optional/guides/opaque.bin: {contract: 1, resource: opaque.bin}
+                  resource/camel-optional/guides/text.bin: {contract: 1, resource: guide.md}
                 """);
         write("optional", "entry.md", SKILL.replace("camel-inspect", "camel-optional"));
-        write("optional", "guide.md", "Original guide.");
+        write("optional", "guide.md", "Original guide.\n");
+        write("optional", "example.yaml", "title: example\r\nitems: []\n");
+        write("optional", "legacy.md", "Older guide.\r\n");
+        byte[] binary = {0, (byte) 0xff, '\r', '\n'};
+        Files.write(source.resolve(SkillPack.directory("optional")).resolve("opaque.bin"), binary);
         Path before = distribution(source, "optional");
         Path overlay = pack("minimal", "requires: [optional]\nexclude: [skill/camel-optional]");
         Path after = temp.resolve("minimal-dist");
@@ -335,22 +351,122 @@ class SkillPackCompilerTest {
         Path skill = workspace.resolve(".bob/skills/camel-optional");
         Path stub = workspace.resolve(".bob/commands/camel-optional.md");
         assertCli(0, before, workspace, "init", "--here", "--ai", "bob2", "--no-fetch", "--silent");
+        Path ledger = workspace.resolve(".camel-kit/managed-files.properties");
+        Properties records = new Properties();
+        try (var in = Files.newBufferedReader(ledger)) {
+            records.load(in);
+        }
+        // The previous writer recorded raw CRLF bytes even when Git later checked the file out with LF.
+        Path legacy = skill.resolve("guides/legacy.md");
+        records.setProperty("catalog/.bob/skills/camel-optional/guides/legacy.md",
+                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(legacy))));
+        try (var out = Files.newBufferedWriter(ledger)) {
+            records.store(out, null);
+        }
+        Files.writeString(legacy, "Older guide.\n");
+        Files.writeString(stub, Files.readString(stub).replace("\r\n", "\n").replace("\n", "\r\n"));
+        Files.writeString(skill.resolve("guides/example.yaml"), "title: example\r\nitems: []\r\n");
+        binary[1] = (byte) 0xfe;
+        Files.write(skill.resolve("guides/opaque.bin"), binary);
+        Files.writeString(skill.resolve("guides/text.bin"), "Original guide.\r\n");
         Files.writeString(skill.resolve("guides/edited.md"), "My edits.");
         Files.writeString(skill.resolve("guides/user.md"), "My own guide.");
         assertTrue(Files.isRegularFile(stub));
         String preview = assertCli(0, after, workspace, "init", "--here", "--ai", "bob2", "--dry-run");
-        assertTrue(preview.contains("remove") && preview.contains(".bob/commands/camel-optional.md"), preview);
+        assertPreview(preview, "remove", ".bob/commands/camel-optional.md");
+        assertPreview(preview, "remove", ".bob/skills/camel-optional/guides/example.yaml");
+        assertPreview(preview, "remove", ".bob/skills/camel-optional/guides/legacy.md");
+        assertPreview(preview, "preserve", ".bob/skills/camel-optional/guides/edited.md");
+        assertPreview(preview, "preserve", ".bob/skills/camel-optional/guides/opaque.bin");
+        assertPreview(preview, "preserve", ".bob/skills/camel-optional/guides/text.bin");
+        assertTrue(preview.contains("--replace <path>"));
         assertTrue(Files.isRegularFile(stub));
         assertTrue(Files.isRegularFile(skill.resolve("SKILL.md")));
         for (int i = 0; i < 2; i++) {
-            assertCli(0, after, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch", "--silent");
+            String report = assertCli(0, after, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch");
+            assertTrue(report.contains("Kept retired catalog file .bob/skills/camel-optional/guides/edited.md"),
+                    report);
             assertFalse(Files.exists(stub));
             assertFalse(Files.exists(skill.resolve("SKILL.md")));
             assertFalse(Files.exists(skill.resolve("guides/owned.md")));
+            assertFalse(Files.exists(skill.resolve("guides/example.yaml")));
+            assertFalse(Files.exists(legacy));
+            assertArrayEquals(binary, Files.readAllBytes(skill.resolve("guides/opaque.bin")));
+            assertEquals("Original guide.\r\n", Files.readString(skill.resolve("guides/text.bin")));
             assertEquals("My edits.", Files.readString(skill.resolve("guides/edited.md")));
             assertEquals("My own guide.", Files.readString(skill.resolve("guides/user.md")));
         }
         assertCli(0, after, workspace, "doctor");
+    }
+
+    private static void assertPreview(String preview, String action, String path) {
+        assertTrue(preview.replaceAll("\u001B\\[[0-9;]*m", "").lines().map(String::strip)
+                .anyMatch(line -> List.of(line.split("\\s+", 2)).equals(List.of(action, path))), preview);
+    }
+
+    @Test
+    @Tag("cli-compat")
+    void catalogLayoutChangesKeepTheOldInstallationOnFailure() throws Exception {
+        write("flat", "entry.md", SKILL.replace("camel-inspect", "camel-old"));
+        write("flat", "shape.txt", "Flat");
+        write("flat", "guide.md", "Same content");
+        write("nested", "entry.md", SKILL.replace("camel-inspect", "camel-new"));
+        write("nested", "shape.txt", "Nested");
+        write("nested", "guide.md", "Same content");
+        Path flat = distribution(pack("flat", """
+                add:
+                  skill/camel-old: {contract: 1, resource: entry.md}
+                  resource/shared/layout: {contract: 1, resource: shape.txt}
+                  resource/shared/Guide.md: {contract: 1, resource: guide.md}
+                """), "flat");
+        Path nested = distribution(pack("nested", """
+                add:
+                  skill/camel-new: {contract: 1, resource: entry.md}
+                  resource/shared/layout/guide.md: {contract: 1, resource: shape.txt}
+                  resource/shared/guide.md: {contract: 1, resource: guide.md}
+                """), "nested");
+        Path workspace = Files.createDirectory(temp.resolve("layout-workspace"));
+        Path skills = workspace.resolve(".bob/skills");
+        Path old = skills.resolve("camel-old/SKILL.md");
+        Path stub = workspace.resolve(".bob/commands/camel-old.md");
+        Path shape = skills.resolve("shared/layout");
+        assertCli(0, flat, workspace, "init", "--here", "--ai", "bob2", "--no-fetch");
+        Path conflict = Files.writeString(skills.resolve("camel-new"), "My file");
+        for (String mode : List.of("--dry-run", "--force")) {
+            String output = assertCli(1, nested, workspace, "init", "--here", "--ai", "bob2", mode, "--no-fetch");
+            assertTrue(output.contains("camel-new"), output);
+            assertEquals("My file", Files.readString(conflict));
+            assertTrue(Files.isRegularFile(old));
+            assertTrue(Files.isRegularFile(stub));
+            assertEquals("Flat", Files.readString(shape));
+        }
+        Files.delete(conflict);
+        Path worker = workspace.resolve(".bob/agents/camel-worker.md");
+        Files.delete(worker);
+        Files.createDirectory(worker);
+        Path note = Files.writeString(worker.resolve("note"), "Keep this directory");
+        // Bob writes this template after installing skills, including the staged layout.
+        assertCli(1, nested, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch");
+        assertEquals("Keep this directory", Files.readString(note));
+        assertEquals("Flat", Files.readString(shape));
+        assertTrue(Files.isRegularFile(old));
+        assertTrue(Files.isRegularFile(stub));
+        Files.delete(note);
+        Files.delete(worker);
+        assertCli(0, nested, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch");
+        assertEquals("Nested", Files.readString(shape.resolve("guide.md")));
+        assertFalse(Files.exists(old));
+        assertFalse(Files.exists(stub));
+        assertEquals("Same content", Files.readString(skills.resolve("shared/guide.md")));
+        Path extra = Files.writeString(shape.resolve("my-guide.md"), "Keep me");
+        assertCli(1, flat, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch");
+        assertEquals("Keep me", Files.readString(extra));
+        assertEquals("Nested", Files.readString(shape.resolve("guide.md")));
+        Files.delete(extra);
+        assertCli(0, flat, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch");
+        assertEquals("Flat", Files.readString(shape));
+        assertTrue(Files.isRegularFile(old));
+        assertTrue(Files.isRegularFile(stub));
     }
 
     @Test

@@ -56,7 +56,7 @@ class SkillResourceInstaller {
                 ? codexInvocationPattern(catalog.manifest().workflow()) : null;
         for (String path : catalog.paths()) {
             try (InputStream source = catalog.open(path)) {
-                copySkillFile(ctx, source, ctx.skillsDir().resolve(path), catalog.manifest(), codexInvocations);
+                copySkillFile(ctx, source, ctx.skillFile(path), catalog.manifest(), codexInvocations);
             } catch (Exception e) {
                 failures.add(path + ": " + e.getMessage());
             }
@@ -131,9 +131,11 @@ class SkillResourceInstaller {
 
     private static Pattern codexInvocationPattern(WorkflowManifest workflow) {
         String skills = workflow.skills().stream().map(s -> Pattern.quote(s.name())).collect(Collectors.joining("|"));
-        String destination = "(\\]\\(\\h*<?|^ {0,3}\\[[^\\]\\r\\n]+\\]:\\h*<?)";
-        String boundary = "(?=[.?]*(?:$|[\\s`'\"),;:!\\]}*|~]|<br\\h*/?>))";
-        return Pattern.compile("(?m)(?:" + destination + "|(?<![\\w./:=\\\\-]))/(" + skills + ")" + boundary);
+        String containers = "\\h*(?:>\\h*|(?:[-+*]|\\d{1,9}[.)])\\h+)*";
+        String definition = "^" + containers + "\\[(?:\\\\.|[^\\]\\\\\\r\\n])+\\]:\\h*(?:\\R" + containers + ")?";
+        String destination = "(\\]\\(\\s*<?|" + definition + "<?)";
+        String boundary = "(?=\\**[.?]*(?:$|[\\s`'\"),;:!\\]}|~]|<br\\h*/?>))";
+        return Pattern.compile("(?m)(?:" + destination + "|(?<![\\w./:=\\\\~-])|(?<=~~))/(" + skills + ")" + boundary);
     }
 
     private static void useCodexSkillInvocations(Path markdown, Pattern invocation) throws IOException {
