@@ -90,6 +90,116 @@ guides under `skills/shared/` feed several skills, so check every caller before 
 behaviour goes into trait files under `templates/traits/<agent>/`, which need no code registration. See
 xref:skills.adoc[] for the structure and the tiers.
 
+[[skill-packs]]
+== Contributing a skill pack
+
+Put a descriptor in `src/main/resources/META-INF/camel-kit/packs/<id>/pack.yaml`.
+Resource paths in the descriptor are relative to that directory. Pack IDs and the names of skills, stages,
+steps and providers start with a lowercase ASCII letter and continue with lowercase letters, digits or hyphens.
+List selected pack IDs in the distribution build. The compiler always includes `core`.
+A selected module can contain only instructions and resources.
+
+The example distribution adds a check to the validation report. These are its two pack files.
+
+.pack.yaml
+[source,yaml]
+----
+include::example$skill-pack/src/main/resources/META-INF/camel-kit/packs/report-review/pack.yaml[]
+----
+
+.review.md
+[source,markdown]
+----
+include::example$skill-pack/src/main/resources/META-INF/camel-kit/packs/report-review/review.md[]
+----
+
+=== Composition rules
+
+* `schema: 1` versions the pack descriptor. Each added or replaced entry declares `contract: 1` for its
+  contribution kind. A pack's optional `requires` lists other selected pack IDs. A contribution's optional
+  `requires` lists other contribution keys that must survive composition.
+* `add` maps new keys to declarations. `replace` maps existing keys to new declarations. `exclude` lists existing keys.
+  Each key has one defining pack and at most one replacement or exclusion. A pack editing a key must declare a
+  direct dependency on its defining pack. A provider replacement keeps its service interface and a skill replacement
+  keeps its visibility. Separate guide entries survive an entry-file replacement.
+* Removing a skill also removes its command, generated route and resources supplied under that skill by its owner.
+  Remaining consumers must still have their dependencies. For example, the core router declares the skills in its
+  decision tree. Core supplies host-specific Ship delegates. An explicit replacement owns the skill text for every host and must preserve delegation to the Ship controller.
+* Resolve every requested module and single-origin resource on the build classpath. The compiler rejects duplicate
+  keys, competing edits, dependency cycles, unknown targets, missing files and unsupported contracts before packaging.
+  For example, if both `team-a` and `team-b` replace `step/validate/report/timestamp`, the diagnostic names both
+  packs and the key. Select one replacement in the distribution.
+
+[cols="2,4"]
+|===
+| Contribution key | Declaration and effect
+
+| `skill/<name>`
+| Set `resource` to a Markdown entry with matching `name`, a nonempty `description` and boolean `user_invocable`
+in its YAML frontmatter. For a new skill, `true` creates a public entry and `false` creates an internal skill.
+Kit generates the host visibility flags.
+
+| `resource/<skill-or-shared>/<path>`
+| Set `resource` to the bundled file. Its key determines its destination beneath the assistant's skills directory.
+Use `skill/<name>` for the top-level `SKILL.md`.
+
+| `step/<stage>/<step>/<name>`
+| Set `resource` to Markdown guidance or a check. The stage comes from the workflow manifest. Its skill must
+contain the line `<!-- camel-kit:step <step> -->` exactly once. The compiler inserts active contributions there in
+key order. Core exposes `route/choose` before the router's decision tree and `validate/report` while preparing the report.
+
+| `provider/<name>`
+| Set `provider.service` and `provider.implementation` to fully qualified Java names. The compiler checks the
+public interface, a public concrete implementation and its public zero-argument constructor without initializing the class.
+Keep the provider classes on the distribution's runtime classpath.
+|===
+
+For example, a validation pack can supply an alternate timestamp instruction and require a separately declared guide.
+
+[source,yaml]
+----
+id: team-report
+schema: 1
+requires: [core]
+add:
+  resource/camel-validate/guides/report-format.md:
+    contract: 1
+    resource: format.md
+replace:
+  step/validate/report/timestamp:
+    contract: 1
+    resource: timestamp.md
+    requires: [resource/camel-validate/guides/report-format.md]
+----
+
+=== Build and try the example
+
+From the repository root, build Kit and then package the example against the installed Kit version.
+The example POM binds `org.apache.camel.kit.workflow.SkillPackCompiler` to `process-classes` on the Maven runtime
+classpath. Its arguments are the output archive and a comma-separated list of selected IDs. In a multi-module
+distribution, add the pack JARs as dependencies of the module running the compiler.
+
+[source,bash,subs="+attributes"]
+----
+./mvnw -B clean install
+example="$PWD/docs/modules/ROOT/examples/skill-pack"
+./mvnw -B -f "$example/pom.xml" -Dcamel-kit.version={camel-kit-snapshot-version} \
+  package dependency:build-classpath -Dmdep.outputFile="$example/target/classpath.txt"
+classpath="$example/target/kit-with-report-review-1.0-SNAPSHOT.jar:$(cat "$example/target/classpath.txt")"
+workspace=$(mktemp -d)
+(
+  cd "$workspace" || exit 1
+  java -cp "$classpath" org.apache.camel.kit.CamelKitMain init --here --ai bob2 --no-fetch
+  grep 'List the routes' .bob/skills/camel-validate/SKILL.md
+  java -cp "$classpath" org.apache.camel.kit.CamelKitMain doctor
+)
+----
+
+The example ships `META-INF/camel-kit/catalog.zip` in its JAR. A custom distribution supplies exactly one archive
+at that path. With the standard Kit alone, the loader uses `META-INF/camel-kit/default-catalog.zip`.
+To select additional packs while building core itself, add the pack modules as build/runtime dependencies and set
+`-Dcamel.kit.packs=pack-a,pack-b`. See xref:architecture.adoc#skill-packs[how the catalog reaches the assistant].
+
 [[docs]]
 == Documentation
 

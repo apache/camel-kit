@@ -67,9 +67,10 @@ component_families:
     in_model: true
     reachability: Reachable from the contents of the analysed tree (file bodies, names, symbolic links) without building or running the project.
   - id: C
-    name: Kit skills, templates, traits, agent registry, workflow manifest
-    paths: [kit/camel-kit-core/src/main/resources/skills, kit/camel-kit-core/src/main/resources/templates, kit/camel-kit-core/src/main/resources/agents, kit/camel-kit-core/src/main/resources/workflow]
+    name: Kit skills, templates, traits, agent registry, workflow manifest and assembled skill catalog
+    paths: [kit/camel-kit-core/src/main/resources/skills, kit/camel-kit-core/src/main/resources/templates, kit/camel-kit-core/src/main/resources/agents, kit/camel-kit-core/src/main/resources/workflow, kit/camel-kit-core/src/main/resources/META-INF/camel-kit/packs]
     in_model: true
+    build_inputs: Distribution-selected pack modules. Provider types are checked without initialization. Init consumes the bundled catalog and uses its existing generated-path checks.
     reachability: Only when a shipped instruction or generated artifact itself crosses a boundary it documents holding (allow-list, worker tool list, hook or guard, MCP coordinate or repository). The model disobeying an instruction is not a finding.
   - id: D
     name: Ship controller (Technology Preview)

@@ -394,7 +394,12 @@ links), controller-owned state, caches and private temporary directories *(docum
 
 ## 4.5a Build-time and configuration variants
 
-Camel-Kit is a family of postures. The knobs that move the security envelope:
+Camel-Kit is a family of postures. Skill pack selection is a distribution build input. The maintainer selects modules
+on the build classpath. The compiler checks provider types without initializing them. `init` reads installed skill
+content from the bundled catalog and applies the existing generated-path checks. Pack descriptors in the project
+being initialized do not participate in selection. See the [pack contract](modules/ROOT/pages/contributing.adoc#skill-packs).
+
+The knobs that move the security envelope:
 
 | Knob | Default | Effect on the model | Maintainer stance |
 | --- | --- | --- | --- |

@@ -188,6 +188,13 @@ public class DoctorService {
                     "Missing SKILL.md for: " + String.join(", ", missingSkills),
                     "Restore the missing skill folders or re-run camel-kit init --here --force."));
         }
+        List<String> missingResources = expectations.resources().stream()
+                .filter(path -> !Files.isRegularFile(skillsDir.resolve(path))).toList();
+        if (!missingResources.isEmpty()) {
+            findings.add(DoctorFinding.fail("skills", relativize(root, skillsDir),
+                    "Missing skill resources: " + String.join(", ", missingResources),
+                    "Re-run camel-kit init --here --force to restore the bundled resources."));
+        }
         checkAgentSpecificWorkspace(root, agent, findings);
     }
 

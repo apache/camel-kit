@@ -1,7 +1,6 @@
 package org.apache.camel.kit.generator;
 
 import java.io.IOException;
-import java.net.JarURLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -9,6 +8,7 @@ import java.util.Map;
 
 import org.apache.camel.kit.config.AgentDescriptor;
 import org.apache.camel.kit.config.AgentRegistry;
+import org.apache.camel.kit.workflow.SkillCatalog;
 
 /**
  * Installs Antigravity's native project skills, custom agents, and MCP configuration.
@@ -44,23 +44,11 @@ public class AntigravityGenerator extends DefaultGenerator {
                 requireType(parent, true);
             }
         }
-        if (Files.isDirectory(ctx.skillsDir())) {
-            try (var paths = Files.walk(ctx.skillsDir())) {
-                for (Path target : paths.toList()) {
-                    String relative = ctx.skillsDir().relativize(target).toString().replace('\\', '/');
-                    if (!relative.isEmpty()) {
-                        var loader = getClass().getClassLoader();
-                        var resource = loader.getResource("skills/" + relative);
-                        if (resource == null) {
-                            resource = loader.getResource("skills/" + relative + "/");
-                        }
-                        if (resource != null) {
-                            boolean directory = resource.openConnection() instanceof JarURLConnection jar
-                                    ? jar.getJarEntry().isDirectory() : Files.isDirectory(Path.of(resource.toURI()));
-                            requireType(target, directory);
-                        }
-                    }
-                }
+        for (String path : SkillCatalog.bundled().paths()) {
+            Path target = ctx.skillsDir().resolve(path);
+            requireType(target, false);
+            for (Path parent = target.getParent(); !parent.equals(ctx.skillsDir()); parent = parent.getParent()) {
+                requireType(parent, true);
             }
         }
         McpConfigGenerator.readAntigravityConfig(ctx.projectDir().resolve(ctx.agent().mcpConfigPath()));

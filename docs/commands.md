@@ -579,7 +579,7 @@ camel-kit doc unstale docs/camel-kit/001-order-processing/implementation-plan.md
 
 These commands are used inside your AI coding assistant after project initialization. The entry point is `/camel-start`, which routes to the right pipeline skill. Skills are organized into tiers:
 
-The machine-readable source of truth for command names, generated stubs, skill visibility, pipeline stages, transitions, artifacts, and MCP tool filters is `kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml`. Generated command stubs and consistency tests read that manifest; update it before changing this reference text or any skill frontmatter.
+The machine-readable source of truth for command names, generated stubs, skill visibility, pipeline stages, transitions, artifacts, and MCP tool filters is `kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml`. Command generation and Doctor read the effective workflow from the built skill catalog. The default catalog preserves those entries; update it before changing this reference text or any skill frontmatter.
 
 **Tier 1 — Pipeline:** `/camel-brainstorm`, `/camel-migrate`, `/camel-plan`, `/camel-execute`, `/camel-validate` — five skills implementing a four-stage pipeline, with brainstorm and migrate as alternative Design-stage entries. Invoke them via the `/camel-start` decision tree or directly via slash command.
 

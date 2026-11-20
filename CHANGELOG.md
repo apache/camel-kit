@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Build-time skill pack composition (#192). A distribution can add or replace skills, resources, Java provider
+  bindings and instructions at named workflow steps. Installation, command generation, routing and Doctor use the
+  assembled catalog.
+
 - **Current documentation and ADR history (#182)** — shared lifecycle across design, execution, validation,
   migration, debug and Ship; documentation-only reconciliation through `camel-start`; neutral-context ADR guidance
   preserving accepted reasoning and supersession. Add source snapshots, review records and opt-in project-aware
