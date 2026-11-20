@@ -94,7 +94,9 @@ class SkillResourceInstaller {
                                 && command.skill().equals(skillName));
                 addHyphenatedUserInvocableMetadata(destination, exposeCommand);
             }
-            if (Set.of("copilot", "claude", "pi").contains(ctx.agentName())
+            if (Set.of(AgentGeneratorStrategy.COPILOT.descriptorValue(),
+                    AgentGeneratorStrategy.CLAUDE.descriptorValue(),
+                    AgentGeneratorStrategy.PI.descriptorValue()).contains(ctx.agentName())
                     && workflow.skills().stream().anyMatch(skill -> skill.name().equals(skillName)
                             && "internal".equals(skill.status()))) {
                 addInternalSkillInvocationMetadata(destination, ctx.agentName());
@@ -126,8 +128,10 @@ class SkillResourceInstaller {
         String content = Files.readString(markdown);
         String adapted = content;
         for (WorkflowManifest.WorkflowSkill skill : workflow.skills()) {
+            // A slash in a file path, URL or Markdown link destination is literal.
             Pattern invocation = Pattern.compile(
-                    "(?<![A-Za-z0-9._/-])/" + Pattern.quote(skill.name()) + "(?![A-Za-z0-9-])");
+                    "(?<![\\w./:=\\\\-])(?<!\\]\\()/" + Pattern.quote(skill.name())
+                                                 + "(?=\\.*(?:$|[\\s`'\"),;:!\\]}]))");
             adapted = invocation.matcher(adapted)
                     .replaceAll(Matcher.quoteReplacement("$" + skill.name()));
         }

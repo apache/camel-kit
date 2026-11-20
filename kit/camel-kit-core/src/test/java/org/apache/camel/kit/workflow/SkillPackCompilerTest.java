@@ -14,8 +14,11 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.camel.kit.config.AgentRegistry;
 import org.apache.camel.kit.doc.FrontmatterHandler;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -50,81 +53,345 @@ class SkillPackCompilerTest {
         assertEquals("camel-validate/SKILL.md",
                 catalog.manifest().contributions().get("step/validate/report/timestamp").path());
         assertTrue(content(catalog, "camel-validate/SKILL.md").contains("Use the current date and time"));
+        assertFalse(content(catalog, "camel-start/SKILL.md").contains("<!-- camel-kit:step"));
         assertArrayEquals(Files.readAllBytes(Path.of("src/main/resources/skills/shared/iron-laws.md")),
                 catalog.open("shared/iron-laws.md").readAllBytes());
     }
 
     @Test
-    void independentModuleAndDeclarationOrderProduceIdenticalCatalogs() throws Exception {
-        Path example = Path.of("../../docs/modules/ROOT/examples/skill-pack/src/main/resources").toRealPath();
-        String skill = "  skill/camel-inspect: {contract: 1, resource: SKILL.md}\n";
-        String guide = "  resource/camel-inspect/guides/inspect.md: {contract: 1, resource: guide.md}\n";
-        String provider
-                = "  provider/list: {contract: 1, provider: {service: java.util.List, implementation: java.util.ArrayList}}\n";
-        Path pack = pack("inspect", "add:\n" + skill + guide + provider);
-        write("inspect", "SKILL.md", SKILL);
-        write("inspect", "guide.md", "Keep this guide.");
-        Path overlay = pack("team",
-                """
-                        requires: [inspect, core]
-                        replace:
-                          skill/camel-inspect: {contract: 1, resource: SKILL.md}
-                          provider/list: {contract: 1, provider: {service: java.util.List, implementation: java.util.LinkedList}}
-                        exclude: [step/validate/report/timestamp]
-                        """);
-        write("team", "SKILL.md", SKILL.replace("Original", "Team"));
-        Path exampleJar = temp.resolve("report-review.jar");
-        try (var zip = new ZipOutputStream(Files.newOutputStream(exampleJar)); var files = Files.walk(example)) {
-            for (Path path : files.filter(Files::isRegularFile).toList()) {
-                zip.putNextEntry(new ZipEntry(example.relativize(path).toString().replace('\\', '/')));
-                Files.copy(path, zip);
-                zip.closeEntry();
+    void claudePreservesExistingCommandsThatShareAPackSkillName() throws Exception {
+        Path pack = pack("inspect", "add: {skill/camel-inspect: {contract: 1, resource: inspect.md}}");
+        write("inspect", "inspect.md", SKILL);
+        Path distribution = distribution(pack, "inspect");
+        Path workspace = Files.createDirectory(temp.resolve("workspace"));
+        Path commands = Files.createDirectories(workspace.resolve(".claude/commands"));
+        Files.writeString(commands.resolve("camel-inspect.md"), "My project command.");
+        Files.writeString(commands.resolve("camel-start.md"), "Retired Kit stub.");
+        assertCli(0, distribution, workspace, "init", "--here", "--ai", "claude", "--no-fetch");
+        assertEquals("My project command.", Files.readString(commands.resolve("camel-inspect.md")));
+        assertFalse(Files.exists(commands.resolve("camel-start.md")));
+        assertTrue(Files.isRegularFile(workspace.resolve(".claude/skills/camel-inspect/SKILL.md")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"camel-design", "camel-implement", "camel-test"})
+    void survivingInstructionsRequireGuidesFromExcludedSkills(String skill) throws Exception {
+        Path pack
+                = pack("minimal", "requires: [core]\nreplace: {skill/camel-start: {contract: 1, resource: router.md}}\n"
+                                  + "exclude: [skill/" + skill + "]");
+        write("minimal", "router.md", SKILL.replace("camel-inspect", "camel-start"));
+        try (var loader = loader(pack)) {
+            var error = assertThrows(IOException.class, () -> SkillPackCompiler.compile(loader, List.of("minimal")));
+            assertTrue(error.getMessage().contains("resource/" + skill + "/guides/"), error::getMessage);
+            assertTrue(error.getMessage().contains("minimal: skill/" + skill), error::getMessage);
+        }
+    }
+
+    @Test
+    void excludingOneGuideReportsItsSurvivingConsumerAndTheExcludingPack() throws Exception {
+        String guide = "resource/camel-design/guides/performance.md";
+        Path pack = pack("small", "requires: [core]\nexclude: [" + guide + "]");
+        try (var loader = loader(pack)) {
+            var error = assertThrows(IOException.class, () -> SkillPackCompiler.compile(loader, List.of("small")));
+            assertTrue(error.getMessage().contains("core: "), error::getMessage);
+            assertTrue(error.getMessage().contains("requires missing contribution " + guide), error::getMessage);
+            assertTrue(error.getMessage().contains("small: " + guide), error::getMessage);
+        }
+    }
+
+    @Test
+    void coreMarkdownReferencesToOtherSkillsGuidesAreCatalogDependencies() throws Exception {
+        var catalog = SkillCatalog.bundled();
+        var bindings = catalog.manifest().contributions();
+        Path sources = Path.of("src/main/resources/skills");
+        for (var entry : bindings.entrySet()) {
+            if (!(entry.getKey().startsWith("skill/") || entry.getKey().startsWith("resource/"))) {
+                continue;
+            }
+            String path = entry.getValue().path();
+            if (!path.endsWith(".md")) {
+                continue;
+            }
+            String text = Files.readString(sources.resolve(path));
+            String owner = path.substring(0, path.indexOf('/') + 1);
+            for (String guide : catalog.paths()) {
+                if (guide.contains("/guides/") && !guide.startsWith(owner) && text.contains(guide)) {
+                    assertTrue(entry.getValue().requires().contains("resource/" + guide), path + " -> " + guide);
+                }
             }
         }
-        byte[] first;
-        try (var loader = loader(exampleJar, pack, overlay)) {
-            first = SkillPackCompiler.compile(loader, List.of("team", "report-review", "inspect"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"camel-start", "camel-inspect"})
+    void replacingASkillMustPreserveItsDeclaredVisibility(String name) throws Exception {
+        Path upstream = pack("inspect", "add: {skill/camel-inspect: {contract: 1, resource: entry.md}}");
+        write("inspect", "entry.md", SKILL);
+        Path overlay = pack("team", "requires: [core, inspect]\nreplace: {skill/" + name
+                                    + ": {contract: 1, resource: entry.md}}");
+        write("team", "entry.md", SKILL.replace("camel-inspect", name).replace("true", "false"));
+        try (var loader = loader(upstream, overlay)) {
+            var failure = assertThrows(IOException.class,
+                    () -> SkillPackCompiler.compile(loader, List.of("inspect", "team")));
+            String reason = name.equals("camel-start")
+                    ? "user_invocable differs from the core skill contract"
+                    : "replacement must preserve visibility declared by inspect: skill/camel-inspect";
+            assertEquals("team: skill/" + name + ": " + reason, failure.getMessage());
         }
-        pack("inspect", "add:\n" + provider + guide + skill);
-        try (var loader = loader(overlay, pack, exampleJar)) {
-            assertArrayEquals(first, SkillPackCompiler.compile(loader, List.of("inspect", "team", "report-review")));
+    }
+
+    @Test
+    void replacingTheConsumerAllowsExcludingItsGuide() throws Exception {
+        Path upstream = pack("inspect", """
+                add:
+                  skill/camel-inspect: {contract: 1, resource: entry.md}
+                  resource/camel-inspect/guides/check.md: {contract: 1, resource: check.md}
+                """);
+        write("inspect", "entry.md", SKILL + "Read `guides/check.md`.\n");
+        write("inspect", "check.md", "Check the integration.");
+        Path overlay = pack("team", """
+                requires: [inspect]
+                replace: {skill/camel-inspect: {contract: 1, resource: entry.md}}
+                exclude: [resource/camel-inspect/guides/check.md]
+                """);
+        write("team", "entry.md", SKILL);
+        try (var loader = loader(upstream, overlay)) {
+            assertDoesNotThrow(() -> SkillPackCompiler.compile(loader, List.of("inspect", "team")));
         }
-        Path distribution = temp.resolve("distribution");
+    }
+
+    @Test
+    void aPublicSkillNeedsARoutingMarkerInTheReplacementRouter() throws Exception {
+        Path pack = pack("team", """
+                requires: [core]
+                add: {skill/camel-inspect: {contract: 1, resource: entry.md}}
+                replace: {skill/camel-start: {contract: 1, resource: router.md}}
+                """);
+        write("team", "entry.md", SKILL);
+        write("team", "router.md", SKILL.replace("camel-inspect", "camel-start"));
+        try (var loader = loader(pack)) {
+            var failure = assertThrows(IOException.class, () -> SkillPackCompiler.compile(loader, List.of("team")));
+            assertEquals("team: skill/camel-start: expected one marker for route/choose in camel-start/SKILL.md",
+                    failure.getMessage());
+        }
+    }
+
+    @Test
+    void codexAdaptsCommandMentionsAndPreservesLiteralPaths() throws Exception {
+        Path pack = pack("docs", "add: {skill/docs: {contract: 1, resource: docs.md}, "
+                                 + "skill/camel-inspect: {contract: 1, resource: inspect.md}}");
+        write("docs", "inspect.md", SKILL);
+        String paths = "`/docs/index.md`, `/camel-inspect/notes.md`, `/camel-inspect.md`, "
+                       + "`/docs_config`, `https://example.org/docs` and `[notes](/docs)`.";
+        write("docs", "docs.md", SKILL.replace("camel-inspect", "docs")
+                                 + "Run /docs, then /camel-inspect... Open " + paths + "\n");
+        Path distribution = distribution(pack, "docs");
+        Path workspace = Files.createDirectory(temp.resolve("workspace"));
+        assertCli(0, distribution, workspace, "init", "--here", "--ai", "codex", "--no-fetch");
+        assertTrue(Files.readString(workspace.resolve(".agents/skills/docs/SKILL.md"))
+                .contains("Run $docs, then $camel-inspect... Open " + paths));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"antigravity", "bob2", "claude", "codex", "copilot", "opencode", "pi", "qwen"})
+    void installedContextUsesEffectivePublicSkills(String agent) throws Exception {
+        Path pack = pack("team", """
+                requires: [core]
+                replace: {skill/camel-start: {contract: 1, resource: router.md}}
+                exclude: [skill/camel-knowledge, skill/camel-ship]
+                add: {skill/camel-inspect: {contract: 1, resource: inspect.md}}
+                """);
+        write("team", "router.md", SKILL.replace("camel-inspect", "camel-start") + "<!-- camel-kit:step choose -->\n");
+        write("team", "inspect.md", SKILL);
+        Path distribution = distribution(pack, "team");
+        Path workspace = Files.createDirectory(temp.resolve("workspace"));
+        String output = assertCli(0, distribution, workspace, "init", "--here", "--ai", agent, "--no-fetch");
+        assertFalse(output.contains("/camel-knowledge"));
+        for (String file : List.of("AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md")) {
+            Path path = workspace.resolve(file);
+            if (Files.exists(path)) {
+                String context = Files.readString(path);
+                assertFalse(context.contains("/camel-knowledge") || context.contains("Use `camel-knowledge`"), file);
+                assertFalse(context.contains("/camel-ship") || context.contains("$camel-ship"), file);
+            }
+        }
+        if (!List.of("codex", "pi").contains(agent)) {
+            assertTrue(Files.readString(workspace.resolve("AGENTS.md")).contains("camel-inspect"), agent);
+        }
+        String router = Files.readString(
+                workspace.resolve(AgentRegistry.get(agent).skillsDirectory()).resolve("camel-start/SKILL.md"));
+        assertTrue(router.contains("camel-inspect"));
+        assertFalse(router.contains("camel-knowledge"));
+    }
+
+    private Path distribution(Path pack, String id) throws Exception {
+        Path distribution = temp.resolve("dist");
         Path archive = distribution.resolve(SkillCatalog.DISTRIBUTION);
         Files.createDirectories(archive.getParent());
-        Files.write(archive, first);
-        // Consume the assembled distribution without any input pack directories or JARs on the runtime classpath.
-        try (var loader = loader(distribution)) {
-            SkillCatalog catalog = SkillCatalog.load(loader);
-            assertEquals("java.util.LinkedList",
-                    catalog.manifest().contributions().get("provider/list").provider().implementation());
-            String validate = content(catalog, "camel-validate/SKILL.md");
-            assertTrue(validate.indexOf("## Validation Report\n") < validate.indexOf(REVIEW));
-            assertTrue(validate.indexOf(REVIEW) < validate.indexOf("### Report Format"));
-            assertFalse(validate.contains("Use the current date and time for the timestamped filename"));
+        try (var loader = loader(pack)) {
+            Files.write(archive, SkillPackCompiler.compile(loader, List.of(id)));
         }
-        Path workspace = Files.createDirectory(temp.resolve("workspace"));
-        assertCli(0, distribution, workspace, "init", "--here", "--ai", "bob2", "--no-fetch");
-        Path skills = workspace.resolve(".bob/skills");
-        assertTrue(Files.readString(skills.resolve("camel-validate/SKILL.md")).contains(REVIEW));
-        assertTrue(Files.readString(skills.resolve("camel-inspect/SKILL.md")).contains("Team instructions."));
-        assertTrue(Files.readString(skills.resolve("camel-start/SKILL.md"))
-                .contains("/camel-inspect — Inspect an integration."));
-        assertTrue(Files.readString(workspace.resolve(".bob/commands/camel-inspect.md"))
-                .contains(".bob/skills/camel-inspect/SKILL.md"));
-        Path installedGuide = skills.resolve("camel-inspect/guides/inspect.md");
-        assertEquals("Keep this guide.", Files.readString(installedGuide));
-        assertCli(0, distribution, workspace, "doctor");
-        Files.delete(installedGuide);
-        assertTrue(assertCli(1, distribution, workspace, "doctor").contains("camel-inspect/guides/inspect.md"));
+        return distribution;
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"shared/IRON-LAWS.md", "shared/iron-laws.md/nested.md"})
+    void catalogLoaderRejectsConflictingInstalledPaths(String extraPath) throws Exception {
+        Path archive = temp.resolve(SkillCatalog.DISTRIBUTION);
+        Files.createDirectories(archive.getParent());
+        var catalog = SkillCatalog.bundled();
+        try (var zip = new ZipOutputStream(Files.newOutputStream(archive))) {
+            zip.putNextEntry(new ZipEntry(SkillCatalog.MANIFEST));
+            zip.write(SkillCatalog.JSON.writeValueAsBytes(catalog.manifest()));
+            for (String path : catalog.paths()) {
+                zip.putNextEntry(new ZipEntry("skills/" + path));
+                catalog.open(path).transferTo(zip);
+            }
+            zip.putNextEntry(new ZipEntry("skills/" + extraPath));
+        }
+        try (var loader = loader(temp)) {
+            var error = assertThrows(IOException.class, () -> SkillCatalog.load(loader));
+            String reason = extraPath.endsWith("nested.md") ? "both file and directory" : "differ only by case";
+            assertTrue(error.getMessage().contains(reason), error::getMessage);
+            assertTrue(error.getMessage().contains("shared/iron-laws.md"), error::getMessage);
+        }
+    }
+
+    @Test
+    void catalogLoaderRejectsAnUnsupportedContract() throws Exception {
+        Path archive = temp.resolve(SkillCatalog.DISTRIBUTION);
+        Files.createDirectories(archive.getParent());
+        var original = SkillCatalog.bundled().manifest();
+        var future = new SkillCatalog.Manifest(2, original.packs(), original.workflow(), original.contributions());
+        try (var zip = new ZipOutputStream(Files.newOutputStream(archive))) {
+            zip.putNextEntry(new ZipEntry(SkillCatalog.MANIFEST));
+            zip.write(SkillCatalog.JSON.writeValueAsBytes(future));
+        }
+        try (var loader = loader(temp)) {
+            assertEquals("Unsupported skill catalog contract: 2",
+                    assertThrows(IOException.class, () -> SkillCatalog.load(loader)).getMessage());
+        }
+    }
+
+    @Test
+    void catalogLoaderRejectsTwoAssembledArchives() throws Exception {
+        Path one = temp.resolve("module one");
+        Path two = temp.resolve("module two");
+        for (Path module : List.of(one, two)) {
+            Path archive = module.resolve(SkillCatalog.DISTRIBUTION);
+            Files.createDirectories(archive.getParent());
+            Files.createFile(archive);
+        }
+        try (var loader = loader(one, two)) {
+            var error = assertThrows(IOException.class, () -> SkillCatalog.load(loader));
+            assertTrue(error.getMessage().startsWith("Expected one assembled Camel Kit skill catalog"),
+                    error::getMessage);
+            for (Path module : List.of(one, two)) {
+                assertTrue(
+                        error.getMessage()
+                                .contains(module.resolve(SkillCatalog.DISTRIBUTION).toUri().toURL().toString()),
+                        error::getMessage);
+            }
+        }
+    }
+
+    @Nested
+    class ComposedDistribution {
+        Path pack;
+        Path overlay;
+        Path exampleJar;
+        String skill;
+        String guide;
+        String provider;
+        byte[] first;
+        Path distribution;
+
+        @BeforeEach
+        void assemble() throws Exception {
+            Path example = Path.of("../../docs/modules/ROOT/examples/skill-pack/src/main/resources").toRealPath();
+            skill = "  skill/camel-inspect: {contract: 1, resource: SKILL.md}\n";
+            guide = "  resource/camel-inspect/guides/inspect.md: {contract: 1, resource: guide.md}\n";
+            provider
+                    = "  provider/list: {contract: 1, provider: {service: java.util.List, implementation: java.util.ArrayList}}\n";
+            pack = pack("inspect", "add:\n" + skill + guide + provider);
+            write("inspect", "SKILL.md", SKILL);
+            write("inspect", "guide.md", "Keep this guide.");
+            overlay = pack("team",
+                    """
+                            requires: [inspect, core]
+                            replace:
+                              skill/camel-inspect: {contract: 1, resource: SKILL.md}
+                              provider/list: {contract: 1, provider: {service: java.util.List, implementation: java.util.LinkedList}}
+                            exclude: [step/validate/report/timestamp]
+                            """);
+            write("team", "SKILL.md", SKILL.replace("Original", "Team"));
+            exampleJar = temp.resolve("report-review.jar");
+            try (var zip = new ZipOutputStream(Files.newOutputStream(exampleJar)); var files = Files.walk(example)) {
+                for (Path path : files.filter(Files::isRegularFile).toList()) {
+                    zip.putNextEntry(new ZipEntry(example.relativize(path).toString().replace('\\', '/')));
+                    Files.copy(path, zip);
+                    zip.closeEntry();
+                }
+            }
+            try (var loader = loader(exampleJar, pack, overlay)) {
+                first = SkillPackCompiler.compile(loader, List.of("team", "report-review", "inspect"));
+            }
+            distribution = temp.resolve("distribution");
+            Path archive = distribution.resolve(SkillCatalog.DISTRIBUTION);
+            Files.createDirectories(archive.getParent());
+            Files.write(archive, first);
+        }
+
+        @Test
+        void independentModuleAndDeclarationOrderProduceIdenticalCatalogs() throws Exception {
+            pack("inspect", "add:\n" + provider + guide + skill);
+            try (var loader = loader(overlay, pack, exampleJar)) {
+                assertArrayEquals(first,
+                        SkillPackCompiler.compile(loader, List.of("inspect", "team", "report-review")));
+            }
+        }
+
+        @Test
+        void archiveContainsTheSelectedProviderAndStepInstructions() throws Exception {
+            // Consume the assembled distribution without any input pack directories or JARs on the runtime classpath.
+            try (var loader = loader(distribution)) {
+                SkillCatalog catalog = SkillCatalog.load(loader);
+                assertEquals("java.util.LinkedList",
+                        catalog.manifest().contributions().get("provider/list").provider().implementation());
+                String validate = content(catalog, "camel-validate/SKILL.md");
+                assertTrue(validate.indexOf("## Validation Report\n") < validate.indexOf(REVIEW));
+                assertTrue(validate.indexOf(REVIEW) < validate.indexOf("### Report Format"));
+                assertFalse(validate.contains("Use the current date and time for the timestamped filename"));
+            }
+        }
+
+        @Test
+        void installedFilesMatchTheCatalogAndDoctorNamesAMissingGuide() throws Exception {
+            Path workspace = Files.createDirectory(temp.resolve("workspace"));
+            assertCli(0, distribution, workspace, "init", "--here", "--ai", "bob2", "--no-fetch");
+            Path skills = workspace.resolve(".bob/skills");
+            assertTrue(Files.readString(skills.resolve("camel-validate/SKILL.md")).contains(REVIEW));
+            assertTrue(Files.readString(skills.resolve("camel-inspect/SKILL.md")).contains("Team instructions."));
+            assertTrue(Files.readString(skills.resolve("camel-start/SKILL.md"))
+                    .contains("/camel-inspect — Inspect an integration."));
+            assertTrue(Files.readString(workspace.resolve(".bob/commands/camel-inspect.md"))
+                    .contains(".bob/skills/camel-inspect/SKILL.md"));
+            Path installedGuide = skills.resolve("camel-inspect/guides/inspect.md");
+            assertEquals("Keep this guide.", Files.readString(installedGuide));
+            assertCli(0, distribution, workspace, "doctor");
+            Files.delete(installedGuide);
+            assertTrue(assertCli(1, distribution, workspace, "doctor").contains("camel-inspect/guides/inspect.md"));
+        }
     }
 
     @Test
     void installsInternalSkillWithFlowStyleFrontmatterAndExampleMetadataInItsBody() throws Exception {
         Path source = pack("library", "add: {skill/camel-reader: {contract: 1, resource: reader.md}}");
+        String description
+                = "Read the route and list the affected integrations before proposing changes to its configuration.";
         write("library", "reader.md", """
                 ---
-                {name: camel-reader, description: Read the route., user_invocable: false}
+                {name: camel-reader, description: DESCRIPTION, user_invocable: false}
                 ---
 
                 Example settings from an input project:
@@ -132,7 +399,7 @@ class SkillPackCompilerTest {
                 user-invocable: true
                 disable-model-invocation: false
                 ```
-                """);
+                """.replace("DESCRIPTION", description));
         Path archive = temp.resolve(SkillCatalog.DISTRIBUTION);
         Files.createDirectories(archive.getParent());
         try (var loader = loader(source)) {
@@ -143,6 +410,8 @@ class SkillPackCompilerTest {
         String installed = Files.readString(workspace.resolve(".claude/skills/camel-reader/SKILL.md"));
         String yaml = FrontmatterHandler.extractFrontmatterYaml(installed);
         var header = SkillPack.YAML.readTree(yaml);
+        assertEquals(description, header.get("description").textValue());
+        assertTrue(yaml.contains(description));
         assertFalse(header.get("user-invocable").booleanValue());
         assertTrue(header.get("disable-model-invocation").booleanValue());
         assertTrue(installed.contains("```yaml\nuser-invocable: true\ndisable-model-invocation: false\n```"));
@@ -174,9 +443,10 @@ class SkillPackCompilerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            "requires: [absent]|absent",
-            "requires: [bad]|bad -> bad",
+            "requires: [absent]|Missing pack dependency: bad -> absent",
+            "requires: [bad]|Cyclic pack dependency: bad -> bad",
             "add: {skill/camel-start: {contract: 1, resource: start.md}}|core: skill/camel-start",
+            "add: {skill/shared: {contract: 1, resource: guide.md}}|bad: skill/shared: reserved skill name",
             "add: {step/validate/report/id: {contract: 2, resource: guide.md}}|unsupported contribution contract 2",
             "add: {step/validate/report/id: {contract: 1.5, resource: guide.md}}|1.5",
             "add: {step/validate/missing/id: {contract: 1, resource: guide.md}}|validate/missing",
@@ -187,7 +457,7 @@ class SkillPackCompilerTest {
             "add: {provider/check: {contract: 1, provider: {service: java.lang.Runnable, implementation: java.util.ArrayList}}}|implementation of java.lang.Runnable",
             "exclude: [skill/unknown]|no such contribution",
             "exclude: [skill/camel-start]|requires must name",
-            "requires: [core]\nexclude: [skill/camel-start]|route",
+            "requires: [core]\nexclude: [skill/camel-start]|bad: skill/camel-start: required by core workflow stage route",
             "add: {step/validate/report/id: {contract: 1, resource: guide.md, requires: [provider/missing]}}|requires missing contribution provider/missing",
             "unknown: true|unknown",
             "exclude: []\nexclude: []|Duplicate"

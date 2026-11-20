@@ -29,7 +29,7 @@ class InitCommandTest {
     }
 
     @Test
-    void nextStepsUseCurrentSkillRouterCommands() {
+    void nextStepsUseCurrentSkillRouterCommands() throws Exception {
         CapturingPrinter printer = new CapturingPrinter();
         CamelKitMain main = new CamelKitMain();
         main.setOut(printer);
@@ -47,7 +47,7 @@ class InitCommandTest {
     }
 
     @Test
-    void bob2NextStepsDistinguishShellSkillsAndIdeCommands() {
+    void bob2NextStepsDistinguishShellSkillsAndIdeCommands() throws Exception {
         CapturingPrinter printer = new CapturingPrinter();
         CamelKitMain main = new CamelKitMain();
         main.setOut(printer);
@@ -64,7 +64,7 @@ class InitCommandTest {
     }
 
     @Test
-    void copilotNextStepsUseSkillsInsteadOfCamelSlashCommands() {
+    void copilotNextStepsUseSkillsInsteadOfCamelSlashCommands() throws Exception {
         CapturingPrinter printer = new CapturingPrinter();
         CamelKitMain main = new CamelKitMain();
         main.setOut(printer);
@@ -80,7 +80,7 @@ class InitCommandTest {
     }
 
     @Test
-    void piNextStepsUseTrustAndSkillInvocation() {
+    void piNextStepsUseTrustAndSkillInvocation() throws Exception {
         CapturingPrinter printer = new CapturingPrinter();
         CamelKitMain main = new CamelKitMain();
         main.setOut(printer);
@@ -108,7 +108,7 @@ class InitCommandTest {
     }
 
     @Test
-    void codexNextStepsUseTrustSkillsAndMcpDiscovery() {
+    void codexNextStepsUseTrustSkillsAndMcpDiscovery() throws Exception {
         CapturingPrinter printer = new CapturingPrinter();
         CamelKitMain main = new CamelKitMain();
         main.setOut(printer);

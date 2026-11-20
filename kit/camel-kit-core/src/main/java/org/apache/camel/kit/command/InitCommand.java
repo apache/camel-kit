@@ -1,5 +1,6 @@
 package org.apache.camel.kit.command;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -20,6 +21,7 @@ import org.apache.camel.kit.service.InitWarning;
 import org.apache.camel.kit.tui.InitTuiView;
 import org.apache.camel.kit.tui.TaskTracker;
 import org.apache.camel.kit.util.PrerequisiteChecker;
+import org.apache.camel.kit.workflow.WorkflowManifestLoader;
 
 import dev.tamboui.image.capability.TerminalImageCapabilities;
 import org.aesh.command.CommandDefinition;
@@ -279,7 +281,7 @@ public class InitCommand extends CamelKitCommand {
         printer().println();
     }
 
-    void printNextSteps(String projectName, String agentName, String agentId) {
+    void printNextSteps(String projectName, String agentName, String agentId) throws IOException {
         String divider = "  " + "\u2500".repeat(34);
         printer().println("  " + bold("Next steps"));
         printer().println(divider);
@@ -324,7 +326,10 @@ public class InitCommand extends CamelKitCommand {
         printer().println("  2  " + cyan("/camel-start") + "  \u2014 route integration work");
         printer().println("     " + cyan("/camel-migrate") + " \u2014 migration shortcut");
         printer().println("  3  " + cyan("/camel-debug") + "  \u2014 troubleshoot broken routes");
-        printer().println("     " + cyan("/camel-knowledge") + " \u2014 ask Camel documentation questions");
+        if (WorkflowManifestLoader.loadDefault().commands().stream()
+                .anyMatch(c -> c.userFacing() && c.name().equals("camel-knowledge"))) {
+            printer().println("     " + cyan("/camel-knowledge") + " \u2014 ask Camel documentation questions");
+        }
         printer().println();
     }
 

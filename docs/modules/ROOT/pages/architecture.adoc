@@ -68,13 +68,15 @@ An instructions-only pack needs a descriptor and its Markdown resource.
 
 During Maven's `process-classes` phase, the compiler reads the selected descriptors, checks their contracts and
 dependencies, resolves explicit replacements and exclusions, then binds step instructions into the owning skill.
+It checks literal references to declared guides in the surviving Markdown and removes unused step markers.
 It records each effective contribution's ID, owner, contract, requirements and installed path or provider in
 `catalog.json`. That manifest and the resolved skill files travel together in one archive.
 The package and resource enumeration order has no precedence.
 
 `init` installs the catalog's files and generates host entry points from its workflow. The assistant reads the
-composed instructions at the declared step. Public pack skills also appear in the installed `camel-start` decision
-tree. Doctor checks the commands, skills and supporting files against the same catalog. The default selection exposes
+composed instructions at the declared step. Public pack skills appear in the installed `camel-start` decision
+tree and in host instructions that list direct commands. Doctor checks the commands, skills and supporting files
+against the same catalog. The default selection exposes
 the existing nine public commands and keeps the four internal skills available to their callers.
 A provider entry identifies a Java service and implementation for consumers. Instructions at a step are read by
 the assistant. Executable provider dispatch and result verification are tracked in

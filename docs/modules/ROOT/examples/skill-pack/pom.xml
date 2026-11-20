@@ -24,11 +24,14 @@
                         <goals><goal>run</goal></goals>
                         <configuration>
                             <target>
-                                <java classname="org.apache.camel.kit.workflow.SkillPackCompiler" fork="true" failonerror="true">
+                                <java classname="org.apache.camel.kit.workflow.SkillPackCompiler" fork="true" resultproperty="pack.compiler.exit" errorproperty="pack.compiler.error">
                                     <classpath refid="maven.runtime.classpath"/>
                                     <arg value="${project.build.outputDirectory}/META-INF/camel-kit/catalog.zip"/>
                                     <arg value="report-review"/>
                                 </java>
+                                <fail message="${pack.compiler.error}">
+                                    <condition><not><equals arg1="${pack.compiler.exit}" arg2="0"/></not></condition>
+                                </fail>
                             </target>
                         </configuration>
                     </execution>

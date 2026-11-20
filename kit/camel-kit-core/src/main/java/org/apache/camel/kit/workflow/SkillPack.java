@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
 /** Versioned declarations of one build-time module. Keys are stable across explicitly selected replacements. */
 record SkillPack(String id, int schema, List<String> requires, Map<String, Entry> add, Map<String, Entry> replace,
@@ -22,6 +23,7 @@ record SkillPack(String id, int schema, List<String> requires, Map<String, Entry
 
     static final ObjectMapper YAML = new ObjectMapper(
             YAMLFactory.builder()
+                    .disable(YAMLGenerator.Feature.SPLIT_LINES)
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build())
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
@@ -90,8 +92,11 @@ record SkillPack(String id, int schema, List<String> requires, Map<String, Entry
         if (checked.contains(id)) {
             return;
         }
-        if (path.contains(id) || !packs.containsKey(id)) {
-            throw new IOException("Cyclic or missing pack dependency: " + String.join(" -> ", path) + " -> " + id);
+        if (path.contains(id)) {
+            throw new IOException("Cyclic pack dependency: " + String.join(" -> ", path) + " -> " + id);
+        }
+        if (!packs.containsKey(id)) {
+            throw new IOException("Missing pack dependency: " + String.join(" -> ", path) + " -> " + id);
         }
         path.add(id);
         for (String required : packs.get(id).requires()) {
@@ -124,7 +129,9 @@ record SkillPack(String id, int schema, List<String> requires, Map<String, Entry
         return definitions;
     }
 
-    static Map<String, Declaration> resolve(Map<String, SkillPack> packs, Map<String, Declaration> definitions)
+    static Map<String, Declaration> resolve(
+            Map<String, SkillPack> packs, Map<String, Declaration> definitions,
+            WorkflowManifest workflow)
             throws IOException {
         Map<String, Declaration> effective = new TreeMap<>(definitions);
         Map<String, Declaration> edits = new TreeMap<>();
@@ -150,6 +157,19 @@ record SkillPack(String id, int schema, List<String> requires, Map<String, Entry
                                  + " declared by " + original.location());
             }
             if (edit.entry() == null) {
+                if (edit.kind().equals("skill")) {
+                    for (var stage : workflow.stages()) {
+                        if (stage.skill().equals(edit.name())) {
+                            throw edit.error("required by core workflow stage " + stage.id());
+                        }
+                    }
+                    for (var artifact : workflow.artifacts()) {
+                        if (artifact.producedBy().contains(edit.name())
+                                || artifact.consumedBy().contains(edit.name())) {
+                            throw edit.error("required by core workflow artifact " + artifact.id());
+                        }
+                    }
+                }
                 effective.remove(edit.key());
             } else {
                 effective.put(edit.key(), edit);
@@ -168,14 +188,24 @@ record SkillPack(String id, int schema, List<String> requires, Map<String, Entry
                 }
             }
         }
-        for (Declaration d : effective.values()) {
-            for (String required : d.entry().requires()) {
-                if (!effective.containsKey(required)) {
-                    throw d.error("requires missing contribution " + required);
+        return effective;
+    }
+
+    static void requireContribution(
+            Declaration consumer, String key, Map<String, Declaration> effective,
+            Map<String, SkillPack> packs)
+            throws IOException {
+        if (!effective.containsKey(key)) {
+            String owner = key.startsWith("resource/") ? "skill/" + key.split("/", 3)[1] : key;
+            for (SkillPack pack : packs.values()) {
+                String excluded = pack.exclude().contains(key) ? key : owner;
+                if (pack.exclude().contains(excluded)) {
+                    throw consumer.error("requires missing contribution " + key + " (excluded by "
+                                         + pack.id() + ": " + excluded + ")");
                 }
             }
+            throw consumer.error("requires missing contribution " + key);
         }
-        return effective;
     }
 
     private static void register(Map<String, Declaration> entries, Declaration next) throws IOException {

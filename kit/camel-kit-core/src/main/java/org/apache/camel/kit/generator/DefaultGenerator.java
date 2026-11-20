@@ -6,6 +6,7 @@ import java.nio.file.Path;
 
 import org.apache.camel.kit.workflow.SkillCatalog;
 import org.apache.camel.kit.workflow.WorkflowManifest;
+import org.apache.camel.kit.workflow.WorkflowManifestLoader;
 
 public class DefaultGenerator implements AgentGenerator {
 
@@ -48,7 +49,7 @@ public class DefaultGenerator implements AgentGenerator {
 
     @Override
     public void generate(InitContext ctx) throws Exception {
-        WorkflowManifest workflow = SkillCatalog.bundled().manifest().workflow();
+        WorkflowManifest workflow = WorkflowManifestLoader.loadDefault();
         skillResourceInstaller.removeRetiredShipGuides(ctx);
         for (WorkflowManifest.WorkflowCommand command : workflow.generatedCommandStubs()) {
             if (command.isSkillOnly(ctx.agentName())) {

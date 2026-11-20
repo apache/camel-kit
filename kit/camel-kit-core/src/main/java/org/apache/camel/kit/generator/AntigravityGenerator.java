@@ -67,11 +67,11 @@ public class AntigravityGenerator extends DefaultGenerator {
         preflight(ctx);
         super.generate(ctx);
         QuteTemplateEngine templates = new QuteTemplateEngine();
+        Map<String, Object> data = AgentsMdGenerator.templateData(ctx);
         for (AgentDescriptor.TemplateInstall template : AgentRegistry.descriptor(ctx.agentName()).templates()) {
             if (!PersonaResourceInstaller.isPersonaTemplate(template)) {
                 Path target = ctx.projectDir().resolve(template.target());
-                ctx.files().write(target, templates.render(template.source(),
-                        Map.of("COMMAND_PREFIX", ctx.commandPrefix())));
+                ctx.files().write(target, templates.render(template.source(), data));
             }
         }
         retireGeminiImports(ctx.projectDir());

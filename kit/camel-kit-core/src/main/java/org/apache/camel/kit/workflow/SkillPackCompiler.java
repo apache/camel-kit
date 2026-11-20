@@ -13,15 +13,18 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.camel.kit.doc.FrontmatterHandler;
-import org.apache.camel.kit.generator.AtomicFileWriter;
+import org.apache.camel.kit.util.AtomicFileWriter;
 import org.apache.camel.kit.workflow.SkillPack.Declaration;
 import org.apache.camel.kit.workflow.SkillPack.Entry;
 import org.apache.camel.kit.workflow.WorkflowManifest.WorkflowCommand;
@@ -31,6 +34,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 /** Maven entry point. Pack selection and resource lookup happen before packaging, never in the user's workspace. */
 public final class SkillPackCompiler {
+
+    private static final Pattern GUIDE_REFERENCE = Pattern.compile("(?<![A-Za-z0-9_.-])((?:(?:"
+                                                                   + SkillPack.ID
+                                                                   + "/)?guides/|shared/)[A-Za-z0-9_./-]+?\\.md|"
+                                                                   + SkillPack.ID
+                                                                   + "/SKILL\\.md)(?![A-Za-z0-9_/-]|\\.[A-Za-z0-9])");
+    private static final Pattern STEP_MARKER = Pattern.compile(
+            "(?m)^<!-- camel-kit:step (" + SkillPack.ID + ") -->(?=\\r?$)((?:\\r?\\n){0,2})");
 
     private final ClassLoader loader;
     private final Map<Declaration, byte[]> resources = new HashMap<>();
@@ -46,9 +57,14 @@ public final class SkillPackCompiler {
         }
         List<String> packs = args.length == 1 || args[1].isBlank() ? List.of() : Arrays.asList(args[1].split(",", -1));
         Path output = Path.of(args[0]).toAbsolutePath();
-        byte[] bytes = compile(SkillPackCompiler.class.getClassLoader(), packs);
-        Files.createDirectories(output.getParent());
-        AtomicFileWriter.write(output, bytes);
+        try {
+            byte[] bytes = compile(SkillPackCompiler.class.getClassLoader(), packs);
+            Files.createDirectories(output.getParent());
+            AtomicFileWriter.write(output, bytes);
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
     }
 
     static byte[] compile(ClassLoader loader, List<String> selected) throws Exception {
@@ -65,7 +81,7 @@ public final class SkillPackCompiler {
             readDeclarations(pack.id(), pack.replace());
         }
         Map<String, Declaration> definitions = SkillPack.definitions(packs, base);
-        Map<String, Declaration> entries = SkillPack.resolve(packs, definitions);
+        Map<String, Declaration> entries = SkillPack.resolve(packs, definitions, workflow);
         Map<String, byte[]> files = new TreeMap<>();
         Map<String, SkillCatalog.Binding> bindings = new TreeMap<>();
         Map<String, List<String>> steps = new TreeMap<>();
@@ -91,13 +107,37 @@ public final class SkillPackCompiler {
                 case "provider" -> path = null;
                 default -> throw d.error("unknown contribution kind");
             }
-            bindings.put(d.key(), new SkillCatalog.Binding(
-                    d.pack(), d.entry().contract(), d.entry().requires(), path, d.entry().provider()));
+            List<String> requires = requirements(d, path, definitions);
+            for (String key : requires) {
+                SkillPack.requireContribution(d, key, entries, packs);
+            }
+            bindings.put(d.key(),
+                    new SkillCatalog.Binding(d.pack(), d.entry().contract(), requires, path, d.entry().provider()));
         }
         WorkflowManifest effective = composeWorkflow(workflow, entries, definitions, steps);
         bindSteps(stageSkills, files, steps, entries);
         var manifest = new SkillCatalog.Manifest(1, List.copyOf(packs.keySet()), effective, bindings);
         return archive(new SkillCatalog(manifest, files));
+    }
+
+    private List<String> requirements(Declaration declaration, String path, Map<String, Declaration> definitions) {
+        var requires = new TreeSet<>(declaration.entry().requires());
+        if (path != null && path.endsWith(".md")) {
+            String owner = path.substring(0, path.indexOf('/'));
+            Matcher links = GUIDE_REFERENCE.matcher(new String(resources.get(declaration), StandardCharsets.UTF_8));
+            while (links.find()) {
+                String link = links.group(1);
+                String target = link.startsWith("guides/") ? owner + "/" + link : link;
+                String key = target.endsWith("/SKILL.md")
+                        ? "skill/" + target.substring(0, target.indexOf('/'))
+                        : "resource/" + target;
+                // Only declared destinations denote Kit assets. Examples may also name project files.
+                if (definitions.containsKey(key) && !key.equals(declaration.key())) {
+                    requires.add(key);
+                }
+            }
+        }
+        return List.copyOf(requires);
     }
 
     private WorkflowManifest composeWorkflow(
@@ -127,7 +167,8 @@ public final class SkillPackCompiler {
             JsonNode header = skillHeader(d);
             boolean visible = header.get("user_invocable").booleanValue();
             Declaration original = definitions.get(d.key());
-            if (d != original && visible != skillHeader(original).get("user_invocable").booleanValue()) {
+            if (!d.pack().equals(original.pack())
+                    && visible != skillHeader(original).get("user_invocable").booleanValue()) {
                 throw d.error("replacement must preserve visibility declared by " + original.location());
             }
             skills.add(new WorkflowSkill(
@@ -217,7 +258,10 @@ public final class SkillPackCompiler {
             if (!file && !d.key().matches("skill/" + id) && !d.key().matches("step/" + id + "/" + id + "/" + id)) {
                 throw d.error("invalid contribution identifier");
             }
-            if (d.key().equals("skill/shared") || !SkillCatalog.safePath(e.resource()) || e.provider() != null) {
+            if (d.key().equals("skill/shared")) {
+                throw d.error("reserved skill name 'shared' is used for shared resources");
+            }
+            if (!SkillCatalog.safePath(e.resource()) || e.provider() != null) {
                 throw d.error("expected a pack-relative resource");
             }
             String path = SkillPack.directory(pack) + e.resource();
@@ -301,25 +345,35 @@ public final class SkillPackCompiler {
             Map<String, String> stageSkills, Map<String, byte[]> files, Map<String, List<String>> steps,
             Map<String, Declaration> entries)
             throws IOException {
-        for (var hook : steps.entrySet()) {
-            String[] point = hook.getKey().split("/");
-            String declarations
-                    = entries.values().stream().filter(d -> d.key().startsWith("step/" + hook.getKey() + "/"))
-                            .map(Declaration::location).toList().toString();
-            String path = stageSkills.get(point[0]) + "/SKILL.md";
-            String content = new String(files.get(path), StandardCharsets.UTF_8);
-            String marker = "<!-- camel-kit:step " + point[1] + " -->";
-            var match = Pattern.compile("(?m)^" + Pattern.quote(marker) + "\\r?$").matcher(content);
-            if (match.results().count() != 1) {
-                throw new IOException(
-                        declarations + ": expected one " + marker + " in " + path + " for " + hook.getKey());
+        var bound = new HashSet<String>();
+        for (var stage : stageSkills.entrySet()) {
+            String path = stage.getValue() + "/SKILL.md";
+            Matcher marker = STEP_MARKER.matcher(new String(files.get(path), StandardCharsets.UTF_8));
+            StringBuilder content = new StringBuilder();
+            while (marker.find()) {
+                String point = stage.getKey() + "/" + marker.group(1);
+                List<String> instructions = steps.get(point);
+                if (instructions != null && !bound.add(point)) {
+                    throw stepError(point, path, entries);
+                }
+                String replacement = instructions == null ? "" : String.join("\n\n", instructions) + marker.group(2);
+                marker.appendReplacement(content, Matcher.quoteReplacement(replacement));
             }
-            files.put(path,
-                    match.reset()
-                            .replaceFirst(
-                                    java.util.regex.Matcher.quoteReplacement(String.join("\n\n", hook.getValue())))
-                            .getBytes(StandardCharsets.UTF_8));
+            files.put(path, marker.appendTail(content).toString().getBytes(StandardCharsets.UTF_8));
         }
+        for (String point : steps.keySet()) {
+            if (!bound.contains(point)) {
+                throw stepError(point, stageSkills.get(point.split("/")[0]) + "/SKILL.md", entries);
+            }
+        }
+    }
+
+    private static IOException stepError(String point, String path, Map<String, Declaration> entries) {
+        var declarations = entries.values().stream().filter(d -> d.key().startsWith("step/" + point + "/"))
+                .map(Declaration::location).toList();
+        Declaration skill = entries.get("skill/" + path.substring(0, path.indexOf('/')));
+        return skill.error("expected one marker for " + point + " in " + path
+                           + (declarations.isEmpty() ? "" : " required by " + String.join(", ", declarations)));
     }
 
     private static byte[] archive(SkillCatalog catalog) throws IOException {

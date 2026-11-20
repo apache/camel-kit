@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Build-time skill pack composition (#192). A distribution can add or replace skills, resources, Java provider
+- **Build-time skill pack composition (#192)** — a distribution can add or replace skills, resources, Java provider
   bindings and instructions at named workflow steps. Installation, command generation, routing and Doctor use the
   assembled catalog.
 
