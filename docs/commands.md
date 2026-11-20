@@ -170,7 +170,9 @@ untouched and listed at the end of the run; the version Camel-Kit would have wri
 `.camel-kit/conflicts/`, except for Maven wrapper files, which are listed without a saved version; use
 `--replace-wrapper` to replace the whole wrapper. Pass `--replace <path>` to replace a file in full, or `--dry-run` to preview;
 the preview runs the same validation as init and rejects an existing MCP configuration that cannot be merged. Shipped
-skills and other `camel-*` assets are always regenerated.
+skills and other selected `camel-*` assets are regenerated. When switching distributions, `init --force` removes
+recorded skills, guides and command stubs that the new catalog omits and that still match the last installation.
+Edited and untracked files are preserved. The dry run lists the planned removals.
 
 **TUI experience:**
 

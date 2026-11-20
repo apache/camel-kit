@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.camel.kit.config.AgentGeneratorStrategy;
 import org.apache.camel.kit.doc.FrontmatterHandler;
@@ -51,9 +52,11 @@ class SkillResourceInstaller {
     void install(InitContext ctx, SkillCatalog catalog) throws Exception {
         Files.createDirectories(ctx.skillsDir());
         List<String> failures = new ArrayList<>();
+        Pattern codexInvocations = AgentGeneratorStrategy.CODEX.descriptorValue().equals(ctx.agentName())
+                ? codexInvocationPattern(catalog.manifest().workflow()) : null;
         for (String path : catalog.paths()) {
             try (InputStream source = catalog.open(path)) {
-                copySkillFile(ctx, source, ctx.skillsDir().resolve(path), catalog.manifest());
+                copySkillFile(ctx, source, ctx.skillsDir().resolve(path), catalog.manifest(), codexInvocations);
             } catch (Exception e) {
                 failures.add(path + ": " + e.getMessage());
             }
@@ -67,7 +70,9 @@ class SkillResourceInstaller {
         }
     }
 
-    private void copySkillFile(InitContext ctx, InputStream source, Path destination, SkillCatalog.Manifest catalog)
+    private void copySkillFile(
+            InitContext ctx, InputStream source, Path destination, SkillCatalog.Manifest catalog,
+            Pattern codexInvocations)
             throws Exception {
         Files.createDirectories(destination.getParent());
         Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
@@ -111,8 +116,8 @@ class SkillResourceInstaller {
             if (personaDirectory.isPresent()) {
                 PersonaResourceInstaller.rewriteReferences(destination, personaDirectory.get());
             }
-            if (AgentGeneratorStrategy.CODEX.descriptorValue().equals(ctx.agentName())) {
-                useCodexSkillInvocations(destination, workflow);
+            if (codexInvocations != null) {
+                useCodexSkillInvocations(destination, codexInvocations);
             }
         }
     }
@@ -124,17 +129,17 @@ class SkillResourceInstaller {
         }
     }
 
-    private void useCodexSkillInvocations(Path markdown, WorkflowManifest workflow) throws IOException {
+    private static Pattern codexInvocationPattern(WorkflowManifest workflow) {
+        String skills = workflow.skills().stream().map(s -> Pattern.quote(s.name())).collect(Collectors.joining("|"));
+        String destination = "(\\]\\(\\h*<?|^ {0,3}\\[[^\\]\\r\\n]+\\]:\\h*<?)";
+        String boundary = "(?=[.?]*(?:$|[\\s`'\"),;:!\\]}*|~]|<br\\h*/?>))";
+        return Pattern.compile("(?m)(?:" + destination + "|(?<![\\w./:=\\\\-]))/(" + skills + ")" + boundary);
+    }
+
+    private static void useCodexSkillInvocations(Path markdown, Pattern invocation) throws IOException {
         String content = Files.readString(markdown);
-        String adapted = content;
-        for (WorkflowManifest.WorkflowSkill skill : workflow.skills()) {
-            // A slash in a file path, URL or Markdown link destination is literal.
-            Pattern invocation = Pattern.compile(
-                    "(?<![\\w./:=\\\\-])(?<!\\]\\()/" + Pattern.quote(skill.name())
-                                                 + "(?=\\.*(?:$|[\\s`'\"),;:!\\]}]))");
-            adapted = invocation.matcher(adapted)
-                    .replaceAll(Matcher.quoteReplacement("$" + skill.name()));
-        }
+        String adapted = invocation.matcher(content).replaceAll(match -> Matcher.quoteReplacement(
+                match.group(1) == null ? "$" + match.group(2) : match.group()));
         if (!adapted.equals(content)) {
             AtomicFileWriter.write(markdown, adapted);
         }

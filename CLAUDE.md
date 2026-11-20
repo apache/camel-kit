@@ -30,8 +30,9 @@ Records are used in this codebase (`WorkflowManifest`, `InitContext`, …) and a
 
 Location: `kit/camel-kit-core/src/main/resources/skills/{skill-name}/`
 
-Selected skill packs are assembled at build time. Core declarations and step instructions live in
-`kit/camel-kit-core/src/main/resources/META-INF/camel-kit/packs/core/`. Keep named step markers in
+Selected skill packs are assembled at build time. Under `src/main/resources/` in the core module,
+`workflow/camel-kit-workflow.yaml` declares the core skills and their dependencies.
+`META-INF/camel-kit/packs/core/` holds the core step descriptor and its instructions. Keep named step markers in
 stage skills such as `camel-validate/SKILL.md`. Edit the bound pack resource to change its instructions.
 
 Pipeline (user-invocable):

@@ -58,12 +58,19 @@ public final class SkillPackCompiler {
         List<String> packs = args.length == 1 || args[1].isBlank() ? List.of() : Arrays.asList(args[1].split(",", -1));
         Path output = Path.of(args[0]).toAbsolutePath();
         try {
-            byte[] bytes = compile(SkillPackCompiler.class.getClassLoader(), packs);
-            Files.createDirectories(output.getParent());
-            AtomicFileWriter.write(output, bytes);
+            writeCatalog(output, compile(SkillPackCompiler.class.getClassLoader(), packs));
         } catch (IOException e) {
             System.err.println(e.getMessage());
             System.exit(1);
+        }
+    }
+
+    static void writeCatalog(Path output, byte[] bytes) throws IOException {
+        try {
+            Files.createDirectories(output.getParent());
+            AtomicFileWriter.write(output, bytes);
+        } catch (IOException e) {
+            throw new IOException("Cannot write skill catalog " + output + " (" + e + ")", e);
         }
     }
 
@@ -372,7 +379,8 @@ public final class SkillPackCompiler {
         var declarations = entries.values().stream().filter(d -> d.key().startsWith("step/" + point + "/"))
                 .map(Declaration::location).toList();
         Declaration skill = entries.get("skill/" + path.substring(0, path.indexOf('/')));
-        return skill.error("expected one marker for " + point + " in " + path
+        return skill.error("expected one <!-- camel-kit:step " + point.substring(point.indexOf('/') + 1)
+                           + " --> marker for " + point + " in " + path
                            + (declarations.isEmpty() ? "" : " required by " + String.join(", ", declarations)));
     }
 

@@ -119,16 +119,20 @@ include::example$skill-pack/src/main/resources/META-INF/camel-kit/packs/report-r
   contribution kind. A pack's optional `requires` lists other selected pack IDs. A contribution's optional
   `requires` lists other contribution keys that must survive composition. The compiler also tracks literal
   references in Markdown to declared guides, shared files and skill entry files. Declare indirect dependencies
-  explicitly, including providers selected by name.
+  explicitly, including providers selected by name and commands invoked in prose. For example, a skill that
+  directs users to `/camel-knowledge` declares `requires: [skill/camel-knowledge]`.
 * `add` maps new keys to declarations. `replace` maps existing keys to new declarations. `exclude` lists existing keys.
   Each key has one defining pack and at most one replacement or exclusion. A pack editing a key must declare a
   direct dependency on its defining pack. A provider replacement keeps its service interface and a skill replacement
   keeps its visibility. Separate guide entries survive an entry-file replacement.
 * Removing a skill also removes its command, generated route and resources supplied under that skill by its owner.
+  A core workflow stage must retain its skill. Each artifact must retain every producing and consuming skill.
+  Use `replace` to change the instructions for any of those skills.
   When a remaining instruction still names an excluded guide, the build reports the consumer, missing resource and
   excluding pack. Replace that instruction or keep the guide. The core router also declares the skills in its
   decision tree. Core supplies host-specific Ship delegates. A replacement owns the skill text for every host and
-  must preserve delegation to the Ship controller.
+  must preserve delegation to the Ship controller. Excluding the Ship skill also removes Bob's Ship mode.
+  Native worker presets remain available to the independent `camel-kit ship --backend` command.
 * Resolve every requested module and single-origin resource on the build classpath. The compiler rejects duplicate
   keys, competing edits, dependency cycles, unknown targets, missing files and unsupported contracts before packaging.
   For example, if both `team-a` and `team-b` replace `step/validate/report/timestamp`, the diagnostic names both

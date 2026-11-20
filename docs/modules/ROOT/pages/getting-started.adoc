@@ -264,9 +264,11 @@ regular file. On reinitialization, properties you added to `.camel-kit/config.pr
 Camel Kit records the hash of each tracked file it wrote in `.camel-kit/managed-files.properties`; commit it with
 the project. Known limits:
 
-* Files Camel Kit ships under its own names, such as the `camel-*` skills, subagents, personas and
-  `.camel-kit/templates/`, are regenerated on every run; changes to them are not preserved. Your own skills and
-  files next to them are not touched.
+* Each run regenerates the selected skills, subagents, personas and `.camel-kit/templates/`.
+  When switching distributions, `init --force` removes previously recorded skills, guides and command stubs
+  that the new catalog omits if their bytes still match the last installation. It preserves edited files and
+  files that have no catalog ownership record. Use `--dry-run` to preview the removals.
+  On hosts that use command stubs, Doctor reports any retained `camel-*` stub outside the selected command list.
 * A workspace initialized by an earlier Camel Kit has no ledger, and a missing record never counts as ownership.
   On its first reinitialization the unmarked instruction files get the block appended and the other shared files
   are preserved and reported, even if Camel Kit generated them. Replace those you want refreshed with

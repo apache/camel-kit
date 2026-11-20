@@ -60,6 +60,9 @@ camel-kit init --here [options]
 | `--silent` | `false` | No banner, TUI, progress or summary, for scripted use
 |===
 
+When a new distribution drops a skill, guide or command stub, `init --force` removes the recorded, unmodified
+file. Edited and untracked files are preserved. `--dry-run` lists the planned removals.
+
 Configuration is read in three layers, the later overriding the earlier: the built-in `distribution.properties`,
 the user file given with `-c` or at its default path, and the `-p` flags. Any distribution property can be
 overridden; the common ones are `camel.main.version`, `camel.springboot.version`, `springboot.bom.version`,

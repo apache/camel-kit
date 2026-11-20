@@ -108,7 +108,7 @@ public final class SkillCatalog {
         return new ByteArrayInputStream(bytes);
     }
 
-    static boolean safePath(String path) {
+    public static boolean safePath(String path) {
         return path != null && path.matches("[a-zA-Z0-9_-][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*)*");
     }
 

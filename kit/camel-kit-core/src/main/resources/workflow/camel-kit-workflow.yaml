@@ -111,10 +111,12 @@ skills:
     user_invocable: false
     status: pipeline
     generated_command: camel-brainstorm
+    requires: [skill/camel-knowledge]
   - name: camel-migrate
     user_invocable: false
     status: pipeline
     generated_command: camel-migrate
+    requires: [skill/camel-knowledge]
   - name: camel-plan
     user_invocable: false
     status: pipeline
@@ -123,6 +125,7 @@ skills:
     user_invocable: false
     status: pipeline
     generated_command: camel-execute
+    requires: [skill/camel-knowledge]
   - name: camel-validate
     user_invocable: false
     status: pipeline

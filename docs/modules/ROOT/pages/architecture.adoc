@@ -70,7 +70,10 @@ During Maven's `process-classes` phase, the compiler reads the selected descript
 dependencies, resolves explicit replacements and exclusions, then binds step instructions into the owning skill.
 It checks literal references to declared guides in the surviving Markdown and removes unused step markers.
 It records each effective contribution's ID, owner, contract, requirements and installed path or provider in
-`catalog.json`. That manifest and the resolved skill files travel together in one archive.
+`catalog.json`. A workflow skill's `requires` lists its explicitly declared dependencies. The contribution's
+`requires` also includes references found in its Markdown. The catalog loader validates the combined list.
+Shared reference material can ship without a skill linking to it. The manifest and the resolved files travel
+together in one archive.
 The package and resource enumeration order has no precedence.
 
 `init` installs the catalog's files and generates host entry points from its workflow. The assistant reads the

@@ -559,7 +559,10 @@ violation warrants coordinated disclosure and a CVE; **hardening** means it is f
    `GeneratedAssetCleaner`)*; generated file replacements use atomic writes *(documented — `AtomicFileWriter`)*; existing
    `.codex/config.toml` / `opencode.json` are merged, not replaced *(documented — `docs/architecture.md`)*. `InitService` preflights the exact generated leaves and their ancestors, plus Camel-owned skill,
    shared-guide and template subtrees before writing. `ConfinedPaths` refuses links in these managed
-   paths; unrelated worktrees, custom skills and existing data may contain links. New atomic writes
+   paths; unrelated worktrees, custom skills and existing data may contain links. Catalog retirement reads
+   the previous installation's SHA-256 records only for valid resource or stub paths under the selected
+   agent's generated directories. It checks confinement and content before deleting a regular file and
+   removes only empty parent directories below those roots. New atomic writes
    use umask-default permissions and replacements retain existing POSIX modes.
    Explicitly selected target aliases remain supported. Catalog, Citrus and Forage validate version
    components; Citrus and Forage also validate cache ancestry; Citrus also checks extracted paths and derived reference destinations.
