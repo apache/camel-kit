@@ -64,7 +64,7 @@ public class InitService {
                 agent, request.agentName(), commandsDir, skillsDir, targetDir,
                 request.commandPrefix(), request.distribution(), request.withCitrusMcp(), request.printer(), files);
         requireConfinedOutputs(targetDir, genCtx, isExistingCamelProject(targetDir, request.sourcePlatform()));
-        AgentGeneratorFactory.create(request.agentName()).validate(genCtx);
+        var prepared = AgentGeneratorFactory.create(request.agentName()).prepareCatalog(genCtx, true);
 
         Set<Path> shared = new LinkedHashSet<>();
         shared.add(targetDir.resolve("AGENTS.md"));
@@ -72,7 +72,7 @@ public class InitService {
             shared.add(targetDir.resolve(template.target()));
         }
         shared.add(targetDir.resolve("docs/constitution.md"));
-        List<ManagedFiles.Change> changes = new ArrayList<>();
+        List<ManagedFiles.Change> changes = new ArrayList<>(prepared.catalog().retirements());
         for (Path file : shared) {
             if (files.isShared(file)) {
                 changes.add(change(targetDir, file, files.plan(file)));
@@ -152,7 +152,7 @@ public class InitService {
                 request.commandPrefix(), request.distribution(), request.withCitrusMcp(), request.printer(), files);
         AgentGenerator generator = AgentGeneratorFactory.create(request.agentName());
         requireConfinedOutputs(targetDir, genCtx, isExistingProject);
-        generator.preflight(genCtx);
+        var prepared = generator.prepareCatalog(genCtx, false);
 
         List<Path> createdPaths = new ArrayList<>();
         List<InitWarning> warnings = new ArrayList<>();
@@ -172,7 +172,8 @@ public class InitService {
             progress.finishTask();
 
             progress.startTask("\uD83E\uDD16", "Generating " + agent.name() + " workspace");
-            generator.generate(genCtx);
+            prepared.generate();
+            files.recordCatalogFiles(genCtx);
             progress.finishTask();
 
             progress.startTask("\uD83D\uDD0C", "Configuring Maven wrapper");

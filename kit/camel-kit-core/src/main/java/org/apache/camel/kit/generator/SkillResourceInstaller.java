@@ -2,10 +2,6 @@ package org.apache.camel.kit.generator;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystemAlreadyExistsException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -14,9 +10,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.camel.kit.config.AgentGeneratorStrategy;
+import org.apache.camel.kit.doc.FrontmatterHandler;
 import org.apache.camel.kit.util.AnsiColors;
+import org.apache.camel.kit.workflow.SkillCatalog;
 import org.apache.camel.kit.workflow.WorkflowManifest;
 
 class SkillResourceInstaller {
@@ -36,12 +35,6 @@ class SkillResourceInstaller {
             AgentGeneratorStrategy.QWEN.descriptorValue(),
             AgentGeneratorStrategy.OPENCODE.descriptorValue());
 
-    private static final Set<String> MODEL_HIDDEN_INTERNAL_SKILLS = Set.of(
-            "camel-design",
-            "camel-implement",
-            "camel-test",
-            "camel-verify");
-
     private final DispatchBlockAppender dispatchBlockAppender;
     private final VersionPlaceholderResolver versionPlaceholderResolver;
 
@@ -56,104 +49,39 @@ class SkillResourceInstaller {
         this.versionPlaceholderResolver = versionPlaceholderResolver;
     }
 
-    void install(InitContext ctx, WorkflowManifest workflow) throws Exception {
+    void install(InitContext ctx, SkillCatalog catalog) throws Exception {
         Files.createDirectories(ctx.skillsDir());
-
-        var skillsResource = getClass().getClassLoader().getResource("skills");
-        if (skillsResource == null) {
-            throw new IOException("Skills resource directory not found");
-        }
-
-        URI uri = skillsResource.toURI();
-        FileSystem fileSystem = null;
-        boolean closeFileSystem = false;
-        try {
-            Path skillsSourceDir;
-            if ("jar".equals(uri.getScheme())) {
-                JarFileSystem jarFileSystem = openJarFileSystem(uri);
-                fileSystem = jarFileSystem.fileSystem();
-                closeFileSystem = jarFileSystem.owned();
-                skillsSourceDir = fileSystem.getPath("/skills");
-            } else {
-                skillsSourceDir = Path.of(uri);
-            }
-
-            int filesCopied = copySkills(ctx, skillsSourceDir, workflow);
-            int skillCount;
-            try (var stream = Files.list(ctx.skillsDir())) {
-                skillCount = (int) stream.filter(Files::isDirectory).count();
-            }
-
-            if (filesCopied > 0) {
-                ctx.printer().println(AnsiColors.green("✓") + " Copied " + filesCopied + " files in " + skillCount
-                                      + " skill folders");
-            } else {
-                ctx.printer().println(AnsiColors
-                        .yellow("  No skills copied (this is normal - skills are embedded in command files)"));
-            }
-        } finally {
-            if (fileSystem != null && closeFileSystem) {
-                try {
-                    fileSystem.close();
-                } catch (Exception e) {
-                    // Ignore close errors.
-                }
-            }
-        }
-    }
-
-    private JarFileSystem openJarFileSystem(URI uri) throws Exception {
-        try {
-            return new JarFileSystem(FileSystems.newFileSystem(uri, java.util.Collections.emptyMap()), true);
-        } catch (FileSystemAlreadyExistsException e) {
-            return new JarFileSystem(FileSystems.getFileSystem(uri), false);
-        }
-    }
-
-    private int copySkills(InitContext ctx, Path skillsSourceDir, WorkflowManifest workflow) throws Exception {
-        int filesCopied = 0;
         List<String> failures = new ArrayList<>();
-        try (var stream = Files.walk(skillsSourceDir)) {
-            for (Path source : stream.toList()) {
-                String relativePathStr = skillsSourceDir.relativize(source).toString();
-                if (relativePathStr.isEmpty()) {
-                    continue;
-                }
-
-                Path destination = ctx.skillsDir().resolve(relativePathStr);
-                try {
-                    if (Files.isDirectory(source)) {
-                        Files.createDirectories(destination);
-                    } else {
-                        copySkillFile(ctx, source, destination, workflow);
-                        filesCopied++;
-                    }
-                } catch (Exception e) {
-                    failures.add(relativePathStr + ": " + e.getMessage());
-                }
+        Pattern codexInvocations = AgentGeneratorStrategy.CODEX.descriptorValue().equals(ctx.agentName())
+                ? codexInvocationPattern(catalog.manifest().workflow()) : null;
+        for (String path : catalog.paths()) {
+            try (InputStream source = catalog.open(path)) {
+                copySkillFile(ctx, source, ctx.skillFile(path), catalog.manifest(), codexInvocations);
+            } catch (Exception e) {
+                failures.add(path + ": " + e.getMessage());
             }
         }
         if (!failures.isEmpty()) {
             throw new IOException("Failed to copy skill resources: " + String.join("; ", failures));
         }
-        return filesCopied;
+        try (var stream = Files.list(ctx.skillsDir())) {
+            ctx.printer().println(AnsiColors.green("✓") + " Copied " + catalog.paths().size() + " files in "
+                                  + stream.filter(Files::isDirectory).count() + " skill folders");
+        }
     }
 
     private void copySkillFile(
-            InitContext ctx, Path source, Path destination, WorkflowManifest workflow)
+            InitContext ctx, InputStream source, Path destination, SkillCatalog.Manifest catalog,
+            Pattern codexInvocations)
             throws Exception {
         Files.createDirectories(destination.getParent());
-
-        // Ownership comes from the shipped source: copySkills() visits only files Camel Kit ships, so every file
-        // reaching this method is refreshed. User-owned files (custom skills, notes next to a SKILL.md) are never in
-        // the shipped tree, are never visited and therefore survive reinitialization untouched.
-        try (InputStream in = Files.newInputStream(source)) {
-            Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
-        }
+        Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+        WorkflowManifest workflow = catalog.workflow();
         if (destination.getFileName().toString().equals("SKILL.md")) {
             String skillName = destination.getParent().getFileName().toString();
             boolean shipDelegate = "camel-ship".equals(skillName);
-            if (shipDelegate && NATIVE_SHIP_AGENTS.contains(ctx.agentName())) {
+            if (shipDelegate && NATIVE_SHIP_AGENTS.contains(ctx.agentName())
+                    && "core".equals(catalog.contributions().get("skill/camel-ship").pack())) {
                 try (InputStream nativeSkill = getClass()
                         .getResourceAsStream("/templates/" + ctx.agentName() + "/camel-ship.md")) {
                     if (nativeSkill == null) {
@@ -171,14 +99,12 @@ class SkillResourceInstaller {
                                 && command.skill().equals(skillName));
                 addHyphenatedUserInvocableMetadata(destination, exposeCommand);
             }
-            if (AgentGeneratorStrategy.COPILOT.descriptorValue().equals(ctx.agentName())) {
-                addCopilotReadableInternalSkillMetadata(destination);
-            }
-            if (AgentGeneratorStrategy.CLAUDE.descriptorValue().equals(ctx.agentName())) {
-                addClaudeReadableInternalSkillMetadata(destination);
-            }
-            if (AgentGeneratorStrategy.PI.descriptorValue().equals(ctx.agentName())) {
-                addPiReadableInternalSkillMetadata(destination);
+            if (Set.of(AgentGeneratorStrategy.COPILOT.descriptorValue(),
+                    AgentGeneratorStrategy.CLAUDE.descriptorValue(),
+                    AgentGeneratorStrategy.PI.descriptorValue()).contains(ctx.agentName())
+                    && workflow.skills().stream().anyMatch(skill -> skill.name().equals(skillName)
+                            && "internal".equals(skill.status()))) {
+                addInternalSkillInvocationMetadata(destination, ctx.agentName());
             }
             if (!shipDelegate) {
                 dispatchBlockAppender.append(destination, ctx.agentName());
@@ -190,8 +116,8 @@ class SkillResourceInstaller {
             if (personaDirectory.isPresent()) {
                 PersonaResourceInstaller.rewriteReferences(destination, personaDirectory.get());
             }
-            if (AgentGeneratorStrategy.CODEX.descriptorValue().equals(ctx.agentName())) {
-                useCodexSkillInvocations(destination, workflow);
+            if (codexInvocations != null) {
+                useCodexSkillInvocations(destination, codexInvocations);
             }
         }
     }
@@ -203,24 +129,54 @@ class SkillResourceInstaller {
         }
     }
 
-    private void useCodexSkillInvocations(Path markdown, WorkflowManifest workflow) throws IOException {
+    private static Pattern codexInvocationPattern(WorkflowManifest workflow) {
+        String skills = workflow.skills().stream().map(s -> Pattern.quote(s.name())).collect(Collectors.joining("|"));
+        // Possessive runs keep long labels and nested quote/list prefixes off the Java regex stack.
+        String containers = "\\h*+(?:>\\h*+|(?:[-+*]|\\d{1,9}[.)])\\h++)*+";
+        String label = "\\[(?!\\h*+\\])(?:[^\\[\\]\\\\\\r\\n]++|\\\\.)++\\]";
+        String title = "(?:\"[^\\r\\n]*\"|'[^\\r\\n]*'|\\([^\\r\\n]*\\))";
+        String definition = "^" + containers + label + ":\\h*+(?:\\R" + containers + ")?"
+                            + "(?=\\S++(?:\\h++" + title + ")?\\h*+$)";
+        String destination = "(\\]\\(\\s*<?|" + definition + "<?)";
+        String boundary = "(?=\\**[.?]*(?:$|[\\s`'\"),;:!\\]}|~]|<br\\h*/?>))";
+        return Pattern.compile("(?m)(?:" + destination + "|(?<![\\w./:=\\\\~-])|(?<=~~))/(" + skills + ")" + boundary);
+    }
+
+    private static void useCodexSkillInvocations(Path markdown, Pattern invocation) throws IOException {
         String content = Files.readString(markdown);
-        String adapted = content;
-        for (WorkflowManifest.WorkflowSkill skill : workflow.skills()) {
-            Pattern invocation = Pattern.compile(
-                    "(?<![A-Za-z0-9._/-])/" + Pattern.quote(skill.name()) + "(?![A-Za-z0-9-])");
-            adapted = invocation.matcher(adapted)
-                    .replaceAll(Matcher.quoteReplacement("$" + skill.name()));
-        }
+        String adapted = invocation.matcher(content).replaceAll(match -> {
+            int slash = match.start(2) - 1;
+            String replacement = match.group(1) == null && !trailingGlob(content, slash, match.end(2))
+                    ? "$" + match.group(2) : match.group();
+            return Matcher.quoteReplacement(replacement);
+        });
         if (!adapted.equals(content)) {
             AtomicFileWriter.write(markdown, adapted);
         }
     }
 
+    private static boolean trailingGlob(String content, int slash, int end) {
+        if (end == content.length() || content.charAt(end) != '*') {
+            return false;
+        }
+        int after = end + 1;
+        while (after < content.length() && content.charAt(after) == '*') {
+            after++;
+        }
+        // An asterisk suffix closes Markdown emphasis only if the line also has an opening delimiter.
+        String delimiter = content.substring(end, after);
+        int open = content.lastIndexOf(delimiter, slash - 1);
+        return open <= Math.max(content.lastIndexOf('\n', slash), content.lastIndexOf('\r', slash))
+                || Character.isWhitespace(content.charAt(open + delimiter.length()))
+                || open > 0
+                        && (content.charAt(open - 1) == '\\' || Character.isLetterOrDigit(content.charAt(open - 1)));
+    }
+
     private void addHyphenatedUserInvocableMetadata(Path skillFile, boolean exposeCommand) throws Exception {
         String content = Files.readString(skillFile);
         String normalized = content.replace("\r\n", "\n");
-        if (!normalized.startsWith("---\n") || normalized.contains("\nuser-invocable:")) {
+        String header = FrontmatterHandler.extractFrontmatterYaml(normalized);
+        if (header == null || ("\n" + header).contains("\nuser-invocable:")) {
             return;
         }
 
@@ -249,38 +205,24 @@ class SkillResourceInstaller {
         }
     }
 
-    void addClaudeReadableInternalSkillMetadata(Path skillFile) throws Exception {
-        addInternalSkillInvocationMetadata(skillFile, "Claude");
-    }
-
-    void addCopilotReadableInternalSkillMetadata(Path skillFile) throws Exception {
-        addInternalSkillInvocationMetadata(skillFile, "Copilot");
-    }
-
-    void addPiReadableInternalSkillMetadata(Path skillFile) throws Exception {
-        addInternalSkillInvocationMetadata(skillFile, "Pi");
-    }
-
-    private void addInternalSkillInvocationMetadata(Path skillFile, String agentName) throws Exception {
+    void addInternalSkillInvocationMetadata(Path skillFile, String agentName) throws Exception {
         String skillName = skillFile.getParent().getFileName().toString();
-        if (!MODEL_HIDDEN_INTERNAL_SKILLS.contains(skillName)) {
-            return;
-        }
-
         String content = Files.readString(skillFile);
         String normalized = content.replace("\r\n", "\n");
-        if (!normalized.startsWith("---\n")) {
+        String header = FrontmatterHandler.extractFrontmatterYaml(normalized);
+        if (header == null) {
             throw new IOException(
                     "Internal " + agentName + " skill '" + skillName
                                   + "' must declare frontmatter so invocation metadata can be generated");
         }
 
-        boolean hasUserInvocable = normalized.contains("\nuser-invocable:");
-        boolean hasDisableModelInvocation = normalized.contains("\ndisable-model-invocation:");
+        header = "\n" + header;
+        boolean hasUserInvocable = header.contains("\nuser-invocable:");
+        boolean hasDisableModelInvocation = header.contains("\ndisable-model-invocation:");
         if (hasUserInvocable && hasDisableModelInvocation) {
             return;
         }
-        boolean hasCamelKitUserInvocable = normalized.contains("\nuser_invocable:");
+        boolean hasCamelKitUserInvocable = header.contains("\nuser_invocable:");
         if (!hasCamelKitUserInvocable && !hasUserInvocable) {
             throw new IOException(
                     "Internal " + agentName + " skill '" + skillName
@@ -309,8 +251,5 @@ class SkillResourceInstaller {
         if (inserted) {
             AtomicFileWriter.write(skillFile, updated.toString());
         }
-    }
-
-    private record JarFileSystem(FileSystem fileSystem, boolean owned) {
     }
 }
