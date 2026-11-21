@@ -23,6 +23,7 @@ import org.apache.camel.kit.config.AgentGeneratorStrategy;
 import org.apache.camel.kit.config.AgentRegistry;
 import org.apache.camel.kit.config.OpenCodeProjectConfig;
 import org.apache.camel.kit.doc.FrontmatterHandler;
+import org.apache.camel.kit.generator.CatalogUpdate;
 import org.apache.camel.kit.graph.GraphBuildResult;
 import org.apache.camel.kit.graph.GraphBuilder;
 import org.apache.camel.kit.graph.ParserDiagnostic;
@@ -176,6 +177,12 @@ public class DoctorService {
             return;
         }
 
+        try {
+            CatalogUpdate.checkInterruptedUpdate(root, skillsDir);
+        } catch (IOException e) {
+            findings.add(DoctorFinding.fail("skills", relativize(root, skillsDir), e.getMessage(),
+                    "Review the reported path before re-running init."));
+        }
         List<String> missingSkills = expectations.requiredSkills().stream()
                 .filter(skill -> !Files.isRegularFile(skillsDir.resolve(skill).resolve("SKILL.md")))
                 .toList();

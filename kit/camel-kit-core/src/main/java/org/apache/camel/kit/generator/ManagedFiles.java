@@ -55,7 +55,7 @@ public final class ManagedFiles {
     private static final String CATALOG = "catalog/";
 
     private static final Pattern CATALOG_TEXT = Pattern.compile(
-            "(?i).+\\.(?:md|adoc|txt|ya?ml|json|xml|toml|properties)");
+            "(?i).+\\.(?:md|adoc|txt|ya?ml|json|xml|xsl|sh|toml|properties)");
 
     /** Project-relative directory holding the content Camel-Kit would have written to a preserved file. */
     public static final String PROPOSALS = ".camel-kit/conflicts";
@@ -107,6 +107,9 @@ public final class ManagedFiles {
      * @param proposal for a preserved file, where the content Camel-Kit would have written was saved, when it was
      */
     public record Change(String path, Action action, Path proposal) {
+        public boolean preservedRetiredFile() {
+            return action == Action.PRESERVE && !isShared(path);
+        }
     }
 
     private Map<Path, Path> stagedCatalog = Map.of();
@@ -262,6 +265,7 @@ public final class ManagedFiles {
 
     /** Plan retirements before init writes anything. Only this host's catalog roots are eligible. */
     public CatalogUpdate planCatalog(InitContext ctx) throws IOException {
+        CatalogUpdate.checkInterruptedUpdate(ctx.projectDir(), ctx.skillsDir());
         Set<String> installed = catalogPaths(ctx);
         Map<String, String> spellings = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         installed.forEach(path -> spellings.put(path, path));
@@ -309,8 +313,6 @@ public final class ManagedFiles {
             }
             if (change.action() == Action.PRESERVE || !matchesCatalogFile(change.path(), target)) {
                 preserve(target);
-                ctx.printer().println("  Kept retired catalog file " + change.path()
-                                      + ". Review it and move or remove it manually.");
                 continue;
             }
             Files.delete(target);

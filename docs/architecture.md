@@ -934,6 +934,8 @@ command stubs. On a catalog switch, init checks the old records in the selected 
 files. Text hashes normalize LF and CRLF for the formats listed in the contributor guide. Opaque resources use
 SHA-256 of their exact bytes. An edited retired file keeps its record so later runs can report it. A switch
 between a file and a directory stages the new content and requires all files it displaces to match the ledger.
+Init checks write access before switching. If a run leaves staged content or a backup, subsequent previews,
+initializations and Doctor identify the recovery directory under the selected assistant's skills.
 
 Rejected alternatives:
 

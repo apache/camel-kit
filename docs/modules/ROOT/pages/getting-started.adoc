@@ -267,11 +267,14 @@ the project. Known limits:
 * Each run regenerates the selected skills, subagents, personas and `.camel-kit/templates/`.
   When switching distributions, `init --force` removes unmodified, recorded skills, guides and command stubs from
   the selected assistant's directories after generating the replacement assets. Git conversions between LF and CRLF
-  count as the same content for text resources. If an older development build recorded raw bytes with mixed
-  line endings, a checkout can discard the original pattern. Kit keeps the file when its old hash cannot be matched.
+  count as the same content for the xref:contributing.adoc#skill-packs[supported text formats].
   Use `--dry-run` to preview removals.
   Run init for each assistant you want to update. Codex and Antigravity share `.agents/skills/`, so updating either
   one also updates the skills the other discovers.
+* Switching between a file and a directory requires write access to the directories holding the old files.
+  Restore write access and retry if the preview reports a read-only directory. If an interrupted switch left
+  a recovery directory, `init`, `--dry-run` and Doctor report its path. After any running init has finished,
+  inspect its `previous` and `new` contents when present, move the directory outside the skills tree, and retry.
 * Older installations may have no catalog ownership record. Kit also keeps and reports edited retired files.
   A retained `SKILL.md` remains discoverable even when Doctor passes. Review the skill folder and any associated
   command stub, then move them outside the assistant's discovery directories or delete them if you want to retire

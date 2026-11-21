@@ -2,9 +2,14 @@ package org.apache.camel.kit.generator;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,11 +18,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.apache.camel.kit.util.ConfinedPaths;
 
 /** Previews a catalog switch and keeps retired assets in place until generation succeeds. */
 public final class CatalogUpdate {
+    private static final String STAGING_PREFIX = ".camel-kit-catalog-";
+    private static final Pattern STAGING_NAME = Pattern.compile(Pattern.quote(STAGING_PREFIX) + "[0-9]+");
+
     private final InitContext ctx;
     private final Path project;
     private final List<ManagedFiles.Change> retirements;
@@ -65,6 +74,37 @@ public final class CatalogUpdate {
         return retirements;
     }
 
+    /** A previous run may already have installed the new layout when removal of its backup failed. */
+    public static void checkInterruptedUpdate(Path project, Path skillsDir) throws IOException {
+        ConfinedPaths.requirePath(project, skillsDir);
+        if (!Files.isDirectory(skillsDir, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+        Files.walkFileTree(skillsDir, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attributes) throws IOException {
+                if (STAGING_NAME.matcher(dir.getFileName().toString()).matches()
+                        && (Files.exists(dir.resolve("previous"), LinkOption.NOFOLLOW_LINKS)
+                                || Files.exists(dir.resolve("new"), LinkOption.NOFOLLOW_LINKS))) {
+                    throw new InvalidAgentConfigurationException(
+                            "Unfinished catalog update at " + dir
+                                                                 + ". Once init has stopped, review its contents, move it outside the skills directory, and retry.");
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
+                // Unrelated user skill directories need not be readable to install the selected catalog.
+                if (failure instanceof NoSuchFileException || failure instanceof AccessDeniedException
+                        && !STAGING_NAME.matcher(file.getFileName().toString()).matches()) {
+                    return FileVisitResult.CONTINUE;
+                }
+                throw failure;
+            }
+        });
+    }
+
     private List<Path> removableTree(Path original, Path actual) throws IOException {
         ConfinedPaths.requireTree(project, actual);
         try (var tree = Files.walk(actual)) {
@@ -78,6 +118,11 @@ public final class CatalogUpdate {
                     throw new InvalidAgentConfigurationException(
                             "Catalog layout conflicts with existing path: " + path);
                 }
+                if (!Files.isWritable(entry.getParent())) {
+                    throw new InvalidAgentConfigurationException(
+                            "Cannot replace catalog layout at " + original
+                                                                 + ": directory is not writable: " + entry.getParent());
+                }
             }
             return entries;
         }
@@ -90,7 +135,7 @@ public final class CatalogUpdate {
             Map<Path, Path> outputs = new HashMap<>();
             for (Path root : shapeChanges) {
                 ConfinedPaths.requirePath(project, root);
-                Path scratch = Files.createTempDirectory(root.getParent(), ".camel-kit-catalog-");
+                Path scratch = Files.createTempDirectory(root.getParent(), STAGING_PREFIX);
                 var replacement
                         = new Replacement(root, scratch, scratch.resolve("new").resolve(project.relativize(root)));
                 replacements.add(replacement);

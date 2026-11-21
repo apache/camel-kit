@@ -298,6 +298,8 @@ It honors `metadata.user-invocable` before the top-level field, as Bob does; the
 internal helpers remain hidden. Empty public skill files and unparseable metadata also fail validation.
 
 A missing catalog-selected skill file or guide produces a `FAIL` finding with its path and exit code 1.
+Doctor also fails on an interrupted catalog update and gives the recovery directory's path. After init
+has stopped, review the directory, move it outside the skills tree, and retry initialization.
 
 `doctor` validates `.camel-kit/config.properties`, selected agent command stubs when that target uses them, skill directories and `SKILL.md` files, supporting files selected by the catalog, registered workspace templates, user-invocable command exposure, runtime-supported MCP filtering and permission fields, graph availability, command prefix configuration, Java/Maven/JBang prerequisites, and common stale references in active generated files. For Codex, it parses `.codex/config.toml`, checks the exact MCP allowlists and prompt approval modes, and verifies that every generated custom-agent TOML file declares `name`, `description`, and `developer_instructions`. For Qwen it checks `includeTools` and prompt-preserving `trust`; for OpenCode it checks the generated server-tool `ask` patterns. Legacy Qwen/OpenCode configurations that predate those fields produce upgrade warnings rather than failures, while malformed current configurations fail. Internal skills such as `camel-verify` must exist as skills, but must not be exposed as user command stubs.
 

@@ -267,6 +267,11 @@ public class InitCommand extends CamelKitCommand {
         printer().println("  " + yellow("\u26A0") + bold("  Existing files preserved"));
         printer().println(dim("  Not written by Camel Kit, or changed since, so left as they are:"));
         for (ManagedFiles.Change conflict : result.conflicts()) {
+            if (conflict.preservedRetiredFile()) {
+                printer().println("     " + cyan(conflict.path())
+                                  + dim("  \u2190 retired catalog file, review and move or remove it manually"));
+                continue;
+            }
             String proposal = conflict.proposal() == null
                     ? dim("  \u2190 kept as is, no Camel Kit version saved")
                     : dim("  \u2190 Camel Kit version: ")

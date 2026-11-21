@@ -131,8 +131,12 @@ class SkillResourceInstaller {
 
     private static Pattern codexInvocationPattern(WorkflowManifest workflow) {
         String skills = workflow.skills().stream().map(s -> Pattern.quote(s.name())).collect(Collectors.joining("|"));
-        String containers = "\\h*(?:>\\h*|(?:[-+*]|\\d{1,9}[.)])\\h+)*";
-        String definition = "^" + containers + "\\[(?:\\\\.|[^\\]\\\\\\r\\n])+\\]:\\h*(?:\\R" + containers + ")?";
+        // Possessive runs keep long labels and nested quote/list prefixes off the Java regex stack.
+        String containers = "\\h*+(?:>\\h*+|(?:[-+*]|\\d{1,9}[.)])\\h++)*+";
+        String label = "\\[(?!\\h*+\\])(?:[^\\[\\]\\\\\\r\\n]++|\\\\.)++\\]";
+        String title = "(?:\"[^\\r\\n]*\"|'[^\\r\\n]*'|\\([^\\r\\n]*\\))";
+        String definition = "^" + containers + label + ":\\h*+(?:\\R" + containers + ")?"
+                            + "(?=\\S++(?:\\h++" + title + ")?\\h*+$)";
         String destination = "(\\]\\(\\s*<?|" + definition + "<?)";
         String boundary = "(?=\\**[.?]*(?:$|[\\s`'\"),;:!\\]}|~]|<br\\h*/?>))";
         return Pattern.compile("(?m)(?:" + destination + "|(?<![\\w./:=\\\\~-])|(?<=~~))/(" + skills + ")" + boundary);
@@ -140,11 +144,32 @@ class SkillResourceInstaller {
 
     private static void useCodexSkillInvocations(Path markdown, Pattern invocation) throws IOException {
         String content = Files.readString(markdown);
-        String adapted = invocation.matcher(content).replaceAll(match -> Matcher.quoteReplacement(
-                match.group(1) == null ? "$" + match.group(2) : match.group()));
+        String adapted = invocation.matcher(content).replaceAll(match -> {
+            int slash = match.start(2) - 1;
+            String replacement = match.group(1) == null && !trailingGlob(content, slash, match.end(2))
+                    ? "$" + match.group(2) : match.group();
+            return Matcher.quoteReplacement(replacement);
+        });
         if (!adapted.equals(content)) {
             AtomicFileWriter.write(markdown, adapted);
         }
+    }
+
+    private static boolean trailingGlob(String content, int slash, int end) {
+        if (end == content.length() || content.charAt(end) != '*') {
+            return false;
+        }
+        int after = end + 1;
+        while (after < content.length() && content.charAt(after) == '*') {
+            after++;
+        }
+        // An asterisk suffix closes Markdown emphasis only if the line also has an opening delimiter.
+        String delimiter = content.substring(end, after);
+        int open = content.lastIndexOf(delimiter, slash - 1);
+        return open <= Math.max(content.lastIndexOf('\n', slash), content.lastIndexOf('\r', slash))
+                || Character.isWhitespace(content.charAt(open + delimiter.length()))
+                || open > 0
+                        && (content.charAt(open - 1) == '\\' || Character.isLetterOrDigit(content.charAt(open - 1)));
     }
 
     private void addHyphenatedUserInvocableMetadata(Path skillFile, boolean exposeCommand) throws Exception {

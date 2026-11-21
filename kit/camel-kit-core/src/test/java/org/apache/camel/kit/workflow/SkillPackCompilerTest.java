@@ -7,6 +7,7 @@ import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HexFormat;
@@ -193,16 +194,21 @@ class SkillPackCompilerTest {
         String literal = paths + "\n[manual]: /camel-inspect?view=raw\n[section]: /camel-inspect#overview"
                          + "\n[plain]: /camel-inspect\n[inline]( /camel-inspect) and /camel-inspect?view=raw"
                          + "\n> [quoted]: /docs\n1. [ordered]: </docs>\n> - [nested]:\n>   /camel-inspect"
-                         + "\n`~/docs` and `/camel-inspect*.md`";
+                         + "\n`~/docs` and `/camel-inspect*.md`"
+                         + "\nrm /docs*\n`ls /docs**`"
+                         + "\n> - [escaped\\] label]: /docs 'Reference title'";
         String prose
                 = "Run /docs, then /camel-inspect... **/camel-inspect**? |/docs| /docs<br> Try /docs? ~~ /docs ~~ and ~~/docs~~.";
-        write("docs", "docs.md", SKILL.replace("camel-inspect", "docs") + prose + "\n" + literal + "\n");
+        prose += "\n- [Optional]: /docs to refresh\n[]: /docs\n[   ]: /docs\n*Use /docs*";
+        String example = "[" + "{\"id\":1,\"route\":\"inventory\"},".repeat(2000) + "{\"id\":2}]";
+        write("docs", "docs.md", SKILL.replace("camel-inspect", "docs") + prose + "\n" + literal + "\n" + example);
         Path distribution = distribution(pack, "docs");
         Path workspace = Files.createDirectory(temp.resolve("workspace"));
         assertCli(0, distribution, workspace, "init", "--here", "--ai", "codex", "--no-fetch");
         assertTrue(Files.readString(workspace.resolve(".agents/skills/docs/SKILL.md"))
                 .contains(
-                        prose.replace("/docs", "$docs").replace("/camel-inspect", "$camel-inspect") + "\n" + literal));
+                        prose.replace("/docs", "$docs").replace("/camel-inspect", "$camel-inspect")
+                          + "\n" + literal + "\n" + example));
     }
 
     private Path withoutKnowledge(String survivingCaller) throws IOException {
@@ -331,6 +337,9 @@ class SkillPackCompilerTest {
                   resource/camel-optional/guides/example.yaml: {contract: 1, resource: example.yaml}
                   resource/camel-optional/guides/legacy.md: {contract: 1, resource: legacy.md}
                   resource/camel-optional/guides/opaque.bin: {contract: 1, resource: opaque.bin}
+                  resource/camel-optional/guides/original.bin: {contract: 1, resource: opaque.bin}
+                  resource/camel-optional/guides/setup.sh: {contract: 1, resource: guide.md}
+                  resource/camel-optional/guides/mapping.xsl: {contract: 1, resource: guide.md}
                   resource/camel-optional/guides/text.bin: {contract: 1, resource: guide.md}
                 """);
         write("optional", "entry.md", SKILL.replace("camel-inspect", "camel-optional"));
@@ -365,6 +374,9 @@ class SkillPackCompilerTest {
         }
         Files.writeString(legacy, "Older guide.\n");
         Files.writeString(stub, Files.readString(stub).replace("\r\n", "\n").replace("\n", "\r\n"));
+        for (String name : List.of("setup.sh", "mapping.xsl")) {
+            Files.writeString(skill.resolve("guides").resolve(name), "Original guide.\r\n");
+        }
         Files.writeString(skill.resolve("guides/example.yaml"), "title: example\r\nitems: []\r\n");
         binary[1] = (byte) 0xfe;
         Files.write(skill.resolve("guides/opaque.bin"), binary);
@@ -374,6 +386,9 @@ class SkillPackCompilerTest {
         assertTrue(Files.isRegularFile(stub));
         String preview = assertCli(0, after, workspace, "init", "--here", "--ai", "bob2", "--dry-run");
         assertPreview(preview, "remove", ".bob/commands/camel-optional.md");
+        for (String name : List.of("original.bin", "setup.sh", "mapping.xsl")) {
+            assertPreview(preview, "remove", ".bob/skills/camel-optional/guides/" + name);
+        }
         assertPreview(preview, "remove", ".bob/skills/camel-optional/guides/example.yaml");
         assertPreview(preview, "remove", ".bob/skills/camel-optional/guides/legacy.md");
         assertPreview(preview, "preserve", ".bob/skills/camel-optional/guides/edited.md");
@@ -384,8 +399,13 @@ class SkillPackCompilerTest {
         assertTrue(Files.isRegularFile(skill.resolve("SKILL.md")));
         for (int i = 0; i < 2; i++) {
             String report = assertCli(0, after, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch");
-            assertTrue(report.contains("Kept retired catalog file .bob/skills/camel-optional/guides/edited.md"),
-                    report);
+            var notices = report.lines().filter(line -> line.contains(".bob/skills/camel-optional/guides/edited.md"))
+                    .toList();
+            assertEquals(1, notices.size(), report);
+            assertTrue(notices.getFirst().contains("review and move or remove it manually"), report);
+            for (String name : List.of("original.bin", "setup.sh", "mapping.xsl")) {
+                assertFalse(Files.exists(skill.resolve("guides").resolve(name)), name);
+            }
             assertFalse(Files.exists(stub));
             assertFalse(Files.exists(skill.resolve("SKILL.md")));
             assertFalse(Files.exists(skill.resolve("guides/owned.md")));
@@ -455,9 +475,27 @@ class SkillPackCompilerTest {
         Files.delete(worker);
         assertCli(0, nested, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch");
         assertEquals("Nested", Files.readString(shape.resolve("guide.md")));
+        assertNoStagingDirectories(skills);
         assertFalse(Files.exists(old));
         assertFalse(Files.exists(stub));
         assertEquals("Same content", Files.readString(skills.resolve("shared/guide.md")));
+        if (Files.getFileStore(shape).supportsFileAttributeView("posix")) {
+            var originalPermissions = Files.getPosixFilePermissions(shape);
+            try {
+                Files.setPosixFilePermissions(shape, PosixFilePermissions.fromString("r-xr-xr-x"));
+                if (!Files.isWritable(shape)) {
+                    for (String mode : List.of("--dry-run", "--force")) {
+                        String output
+                                = assertCli(1, flat, workspace, "init", "--here", "--ai", "bob2", mode, "--no-fetch");
+                        assertDiagnosticPath(output, "directory is not writable: ", workspace.relativize(shape));
+                    }
+                    assertEquals("Nested", Files.readString(shape.resolve("guide.md")));
+                    assertNoStagingDirectories(skills);
+                }
+            } finally {
+                Files.setPosixFilePermissions(shape, originalPermissions);
+            }
+        }
         Path extra = Files.writeString(shape.resolve("my-guide.md"), "Keep me");
         assertCli(1, flat, workspace, "init", "--here", "--ai", "bob2", "--force", "--no-fetch");
         assertEquals("Keep me", Files.readString(extra));
@@ -467,6 +505,43 @@ class SkillPackCompilerTest {
         assertEquals("Flat", Files.readString(shape));
         assertTrue(Files.isRegularFile(old));
         assertTrue(Files.isRegularFile(stub));
+        assertNoStagingDirectories(skills);
+    }
+
+    private static void assertDiagnosticPath(String output, String message, Path relative) {
+        // Child processes can resolve the temporary directory through a different spelling on macOS and Windows.
+        assertTrue(output.lines().anyMatch(line -> line.contains(message) && line.contains(relative.toString())),
+                output);
+    }
+
+    private static void assertNoStagingDirectories(Path root) throws IOException {
+        try (var entries = Files.walk(root)) {
+            assertEquals(List.of(),
+                    entries.filter(path -> path.getFileName().toString().startsWith(".camel-kit-catalog-"))
+                            .toList());
+        }
+    }
+
+    @Test
+    @Tag("cli-compat")
+    void interruptedLayoutUpdateRemainsVisibleUntilItsBackupIsRecovered() throws Exception {
+        Path workspace = Files.createDirectory(temp.resolve("interrupted"));
+        assertCli(0, temp, workspace, "init", "--here", "--ai", "claude", "--no-fetch");
+        Path skills = workspace.resolve(".claude/skills");
+        Path scratch = skills.resolve("shared/.camel-kit-catalog-1234");
+        Path backup = Files.createDirectories(scratch.resolve("previous/index")).resolve("guide.md");
+        Files.writeString(backup, "Previous guide");
+        for (String mode : List.of("--dry-run", "--force")) {
+            String result = assertCli(1, temp, workspace, "init", "--here", "--ai", "claude", mode, "--no-fetch");
+            assertDiagnosticPath(result, "Unfinished catalog update at ", workspace.relativize(scratch));
+            assertEquals("Previous guide", Files.readString(backup));
+        }
+        String doctor = assertCli(1, temp, workspace, "doctor");
+        assertDiagnosticPath(doctor, "Unfinished catalog update at ", workspace.relativize(scratch));
+        Files.move(scratch, temp.resolve("recovered"));
+        assertCli(0, temp, workspace, "init", "--here", "--ai", "claude", "--force", "--no-fetch");
+        assertCli(0, temp, workspace, "doctor");
+        assertNoStagingDirectories(skills);
     }
 
     @Test

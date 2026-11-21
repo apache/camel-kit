@@ -564,7 +564,8 @@ violation warrants coordinated disclosure and a CVE; **hardening** means it is f
    agent's generated directories. The committed ledger supplies the ownership claim. Review its changes along
    with the files it tracks. Kit checks confinement and compares installed content before removal, normalizing
    LF and CRLF for recognized UTF-8 text and comparing opaque resources byte for byte. Layout replacements
-   displace only recorded, matching files and their directories. Other retirements prune only empty parents. New atomic writes
+   displace only recorded, matching files and their directories. Init and Doctor report interrupted catalog
+   work directories for inspection. Kit leaves their contents for recovery. Other retirements prune only empty parents. New atomic writes
    use umask-default permissions and replacements retain existing POSIX modes.
    Explicitly selected target aliases remain supported. Catalog, Citrus and Forage validate version
    components; Citrus and Forage also validate cache ancestry; Citrus also checks extracted paths and derived reference destinations.

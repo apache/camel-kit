@@ -88,6 +88,8 @@ https://github.com/apache/camel-kit/issues/196[#196].
 The committed ownership ledger records the installed content after host-specific changes. A catalog switch retires
 matching files after generating the replacement assets. An owned file can become a directory of guides or a
 directory of owned guides can become one file. A project file in the way stops the switch during preview or init.
+Both operations check that the displaced files can be removed. Doctor and init identify an interrupted
+switch by its recovery directory. See xref:getting-started.adoc#existing-project[recovering an existing project].
 
 The xref:contributing.adoc#skill-packs[working report-review pack] adds one check where `camel-validate` prepares its report.
 

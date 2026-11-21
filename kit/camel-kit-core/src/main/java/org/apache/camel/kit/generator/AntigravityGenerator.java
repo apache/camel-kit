@@ -16,6 +16,11 @@ public class AntigravityGenerator extends DefaultGenerator {
 
     @Override
     public void preflight(InitContext ctx) throws Exception {
+        prepareCatalog(ctx, false);
+    }
+
+    @Override
+    public Prepared prepareCatalog(InitContext ctx, boolean preview) throws Exception {
         try {
             GeneratedAssetPreflight.check(ctx);
         } catch (IOException e) {
@@ -43,8 +48,8 @@ public class AntigravityGenerator extends DefaultGenerator {
                 requireType(parent, true);
             }
         }
-        ctx.files().planCatalog(ctx);
         McpConfigGenerator.readAntigravityConfig(ctx.projectDir().resolve(ctx.agent().mcpConfigPath()));
+        return new Prepared(ctx.files().planCatalog(ctx), this::writeWorkspace);
     }
 
     private void requireType(Path target, boolean directory) throws InvalidAgentConfigurationException {
@@ -58,6 +63,10 @@ public class AntigravityGenerator extends DefaultGenerator {
     @Override
     public void generate(InitContext ctx) throws Exception {
         preflight(ctx);
+        writeWorkspace(ctx);
+    }
+
+    private void writeWorkspace(InitContext ctx) throws Exception {
         super.generate(ctx);
         QuteTemplateEngine templates = new QuteTemplateEngine();
         Map<String, Object> data = AgentsMdGenerator.templateData(ctx);
