@@ -101,7 +101,8 @@ public skill hidden by `user-invocable: false`; for Claude Code it accepts the l
 evaluates all configuration layers as one and names the file that defines each rule. Configurations that predate the
 current filter and permission fields produce upgrade warnings; malformed current ones fail. Internal skills must
 exist as skills but must not be exposed as command stubs. A missing catalog-selected file produces a
-`FAIL` finding that names its path and an exit code of 1. Doctor also reports the recovery directory of
+`FAIL` finding that names its path and an exit code of 1. Doctor also fails if a symbolic link lies on the
+path from the workspace to the selected assistant's skills directory. It reports the recovery directory of
 an interrupted catalog update. See xref:getting-started.adoc#existing-project[recovery instructions].
 
 In the development snapshot, Citrus MCP configuration is optional. When the project has not opted in,

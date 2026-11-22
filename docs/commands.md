@@ -298,6 +298,7 @@ It honors `metadata.user-invocable` before the top-level field, as Bob does; the
 internal helpers remain hidden. Empty public skill files and unparseable metadata also fail validation.
 
 A missing catalog-selected skill file or guide produces a `FAIL` finding with its path and exit code 1.
+Doctor also fails if a symbolic link lies on the path from the workspace to the selected assistant's skills directory.
 Doctor also fails on an interrupted catalog update and gives the recovery directory's path. After init
 has stopped, review the directory, move it outside the skills tree, and retry initialization.
 

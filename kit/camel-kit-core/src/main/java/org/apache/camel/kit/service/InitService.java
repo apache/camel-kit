@@ -2,6 +2,7 @@ package org.apache.camel.kit.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -26,6 +27,7 @@ import org.apache.camel.kit.generator.AgentGeneratorFactory;
 import org.apache.camel.kit.generator.AtomicFileWriter;
 import org.apache.camel.kit.generator.GeneratedAssetPreflight;
 import org.apache.camel.kit.generator.InitContext;
+import org.apache.camel.kit.generator.InvalidAgentConfigurationException;
 import org.apache.camel.kit.generator.ManagedFiles;
 import org.apache.camel.kit.generator.QuteTemplateEngine;
 import org.apache.camel.kit.graph.GraphBuildResult;
@@ -237,6 +239,8 @@ public class InitService {
             ConfinedPaths.requireTree(targetDir, targetDir.resolve(".camel-kit/templates"));
             ConfinedPaths.requireTree(targetDir, targetDir.resolve(ManagedFiles.PROPOSALS));
             GeneratedAssetPreflight.check(genCtx);
+        } catch (AccessDeniedException e) {
+            throw InvalidAgentConfigurationException.unreadableDirectory(e);
         } catch (IOException e) {
             throw new IOException("Initialization aborted: " + e.getMessage(), e);
         }

@@ -83,12 +83,19 @@ public final class CatalogUpdate {
         Files.walkFileTree(skillsDir, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attributes) throws IOException {
-                if (STAGING_NAME.matcher(dir.getFileName().toString()).matches()
-                        && (Files.exists(dir.resolve("previous"), LinkOption.NOFOLLOW_LINKS)
-                                || Files.exists(dir.resolve("new"), LinkOption.NOFOLLOW_LINKS))) {
-                    throw new InvalidAgentConfigurationException(
-                            "Unfinished catalog update at " + dir
-                                                                 + ". Once init has stopped, review its contents, move it outside the skills directory, and retry.");
+                if (!STAGING_NAME.matcher(dir.getFileName().toString()).matches()) {
+                    return FileVisitResult.CONTINUE;
+                }
+                // A catalog resource always lives below a skill or shared, so init cannot stage at the skills root.
+                if (skillsDir.equals(dir.getParent())) {
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
+                try (var entries = Files.newDirectoryStream(dir, "{previous,new}")) {
+                    if (entries.iterator().hasNext()) {
+                        throw new InvalidAgentConfigurationException(
+                                "Unfinished catalog update at " + dir
+                                                                     + ". Once init has stopped, review its contents, move it outside the skills directory, and retry.");
+                    }
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -96,8 +103,14 @@ public final class CatalogUpdate {
             @Override
             public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
                 // Unrelated user skill directories need not be readable to install the selected catalog.
-                if (failure instanceof NoSuchFileException || failure instanceof AccessDeniedException
-                        && !STAGING_NAME.matcher(file.getFileName().toString()).matches()) {
+                if (failure instanceof AccessDeniedException denied) {
+                    if (!skillsDir.equals(file.getParent())
+                            && STAGING_NAME.matcher(file.getFileName().toString()).matches()) {
+                        throw InvalidAgentConfigurationException.unreadableDirectory(denied);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+                if (failure instanceof NoSuchFileException) {
                     return FileVisitResult.CONTINUE;
                 }
                 throw failure;

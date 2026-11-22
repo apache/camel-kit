@@ -275,6 +275,7 @@ the project. Known limits:
   Restore write access and retry if the preview reports a read-only directory. If an interrupted switch left
   a recovery directory, `init`, `--dry-run` and Doctor report its path. After any running init has finished,
   inspect its `previous` and `new` contents when present, move the directory outside the skills tree, and retry.
+  If the directory cannot be inspected, restore read and search permissions first.
 * Older installations may have no catalog ownership record. Kit also keeps and reports edited retired files.
   A retained `SKILL.md` remains discoverable even when Doctor passes. Review the skill folder and any associated
   command stub, then move them outside the assistant's discovery directories or delete them if you want to retire

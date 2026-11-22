@@ -196,11 +196,16 @@ class SkillPackCompilerTest {
                          + "\n> [quoted]: /docs\n1. [ordered]: </docs>\n> - [nested]:\n>   /camel-inspect"
                          + "\n`~/docs` and `/camel-inspect*.md`"
                          + "\nrm /docs*\n`ls /docs**`"
-                         + "\n> - [escaped\\] label]: /docs 'Reference title'";
+                         + "\n> - [escaped\\] label]: /docs 'Reference title'"
+                         + "\n[quote]: /docs \"A \\\"quoted\\\" title\"\n[paren]: /docs (A \\(nested\\) title)"
+                         + "\n**Step**: run /docs* next\r*Step*: run /docs* next\r\nrm /docs**";
         String prose
                 = "Run /docs, then /camel-inspect... **/camel-inspect**? |/docs| /docs<br> Try /docs? ~~ /docs ~~ and ~~/docs~~.";
         prose += "\n- [Optional]: /docs to refresh\n[]: /docs\n[   ]: /docs\n*Use /docs*";
+        prose += "\n[x]: /docs \"a\" b \"c\"\n[y]: /docs 'a' b 'c'\n[z]: /docs (a) b (c)";
+        prose += "\n***Use /docs** and /docs*\n*Use *this* /docs*";
         String example = "[" + "{\"id\":1,\"route\":\"inventory\"},".repeat(2000) + "{\"id\":2}]";
+        literal += "\n" + "rm /docs*\n".repeat(20_000);
         write("docs", "docs.md", SKILL.replace("camel-inspect", "docs") + prose + "\n" + literal + "\n" + example);
         Path distribution = distribution(pack, "docs");
         Path workspace = Files.createDirectory(temp.resolve("workspace"));
@@ -506,6 +511,45 @@ class SkillPackCompilerTest {
         assertTrue(Files.isRegularFile(old));
         assertTrue(Files.isRegularFile(stub));
         assertNoStagingDirectories(skills);
+    }
+
+    @Test
+    @Tag("cli-compat")
+    void recoveryChecksDistinguishSkillRootsFromCatalogWorkDirectories() throws Exception {
+        Path workspace = Files.createDirectory(temp.resolve("workspace"));
+        assertCli(0, temp, workspace, "init", "--here", "--ai", "claude", "--no-fetch");
+        assertCli(0, temp, workspace, "graph", "generate", "--project-dir", workspace.toString());
+        Path skills = workspace.resolve(".claude/skills");
+        Path personal = Files.createDirectory(skills.resolve(".camel-kit-catalog-1234"));
+        Path note = Files.writeString(personal.resolve("previous"), "My notes");
+        assertCli(0, temp, workspace, "init", "--here", "--ai", "claude", "--force", "--no-fetch");
+        assertCli(0, temp, workspace, "doctor");
+        if (Files.getFileStore(skills).supportsFileAttributeView("posix")) {
+            Path nested = Files.createDirectory(skills.resolve("shared").resolve(personal.getFileName()));
+            for (Path dir : List.of(personal, nested)) {
+                var permissions = Files.getPosixFilePermissions(dir);
+                Files.setPosixFilePermissions(dir, Set.of());
+                try {
+                    if (Files.isReadable(dir)) {
+                        continue;
+                    }
+                    int status = dir.equals(nested) ? 1 : 0;
+                    for (String[] args : List.of(new String[]{"doctor"},
+                            new String[]{"init", "--here", "--ai", "claude", "--force", "--no-fetch"},
+                            new String[]{"init", "--here", "--ai", "claude", "--dry-run", "--no-fetch"})) {
+                        String output = assertCli(status, temp, workspace, args);
+                        if (status == 1) {
+                            assertDiagnosticPath(output, "Cannot inspect ", workspace.relativize(nested));
+                            assertTrue(output.contains("Restore read and search permissions"), output);
+                            assertFalse(output.contains("AccessDeniedException"), output);
+                        }
+                    }
+                } finally {
+                    Files.setPosixFilePermissions(dir, permissions);
+                }
+            }
+        }
+        assertEquals("My notes", Files.readString(note));
     }
 
     private static void assertDiagnosticPath(String output, String message, Path relative) {

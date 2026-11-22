@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -19,6 +20,8 @@ import org.apache.camel.kit.workflow.SkillCatalog;
 import org.apache.camel.kit.workflow.WorkflowManifest;
 
 class SkillResourceInstaller {
+
+    private static final Pattern STARS_OR_LINE_BREAK = Pattern.compile("\\*++|\\R");
 
     private static final List<String> RETIRED_SHIP_GUIDES = List.of(
             "auto-fix-loop.md",
@@ -134,7 +137,8 @@ class SkillResourceInstaller {
         // Possessive runs keep long labels and nested quote/list prefixes off the Java regex stack.
         String containers = "\\h*+(?:>\\h*+|(?:[-+*]|\\d{1,9}[.)])\\h++)*+";
         String label = "\\[(?!\\h*+\\])(?:[^\\[\\]\\\\\\r\\n]++|\\\\.)++\\]";
-        String title = "(?:\"[^\\r\\n]*\"|'[^\\r\\n]*'|\\([^\\r\\n]*\\))";
+        String title = "(?:\"(?:[^\"\\\\\\r\\n]++|\\\\.)*+\"|'(?:[^'\\\\\\r\\n]++|\\\\.)*+'"
+                       + "|\\((?:[^()\\\\\\r\\n]++|\\\\.)*+\\))";
         String definition = "^" + containers + label + ":\\h*+(?:\\R" + containers + ")?"
                             + "(?=\\S++(?:\\h++" + title + ")?\\h*+$)";
         String destination = "(\\]\\(\\s*<?|" + definition + "<?)";
@@ -144,9 +148,11 @@ class SkillResourceInstaller {
 
     private static void useCodexSkillInvocations(Path markdown, Pattern invocation) throws IOException {
         String content = Files.readString(markdown);
+        BitSet closingEmphasis = closingEmphasis(content);
         String adapted = invocation.matcher(content).replaceAll(match -> {
-            int slash = match.start(2) - 1;
-            String replacement = match.group(1) == null && !trailingGlob(content, slash, match.end(2))
+            int end = match.end(2);
+            boolean glob = end < content.length() && content.charAt(end) == '*' && !closingEmphasis.get(end);
+            String replacement = match.group(1) == null && !glob
                     ? "$" + match.group(2) : match.group();
             return Matcher.quoteReplacement(replacement);
         });
@@ -155,21 +161,36 @@ class SkillResourceInstaller {
         }
     }
 
-    private static boolean trailingGlob(String content, int slash, int end) {
-        if (end == content.length() || content.charAt(end) != '*') {
-            return false;
+    // Pair asterisk runs on the same line so a shell glob cannot reuse an earlier closing delimiter.
+    private static BitSet closingEmphasis(String content) {
+        BitSet closing = new BitSet();
+        int openStars = 0;
+        Matcher runs = STARS_OR_LINE_BREAK.matcher(content);
+        while (runs.find()) {
+            if (content.charAt(runs.start()) != '*') {
+                openStars = 0;
+                continue;
+            }
+            char before = runs.start() == 0 ? ' ' : content.charAt(runs.start() - 1);
+            char after = runs.end() == content.length() ? ' ' : content.charAt(runs.end());
+            if (before == '\\') {
+                continue;
+            }
+            int stars = runs.end() - runs.start();
+            boolean followsWord = Character.isLetterOrDigit(before);
+            if (!Character.isWhitespace(before) && (followsWord || !Character.isLetterOrDigit(after))) {
+                int paired = Math.min(stars, openStars);
+                openStars -= paired;
+                stars -= paired;
+                if (stars == 0) {
+                    closing.set(runs.start());
+                }
+            }
+            if (!followsWord && !Character.isWhitespace(after)) {
+                openStars += stars;
+            }
         }
-        int after = end + 1;
-        while (after < content.length() && content.charAt(after) == '*') {
-            after++;
-        }
-        // An asterisk suffix closes Markdown emphasis only if the line also has an opening delimiter.
-        String delimiter = content.substring(end, after);
-        int open = content.lastIndexOf(delimiter, slash - 1);
-        return open <= Math.max(content.lastIndexOf('\n', slash), content.lastIndexOf('\r', slash))
-                || Character.isWhitespace(content.charAt(open + delimiter.length()))
-                || open > 0
-                        && (content.charAt(open - 1) == '\\' || Character.isLetterOrDigit(content.charAt(open - 1)));
+        return closing;
     }
 
     private void addHyphenatedUserInvocableMetadata(Path skillFile, boolean exposeCommand) throws Exception {
