@@ -21,7 +21,7 @@ import org.apache.camel.kit.workflow.WorkflowManifest;
 
 class SkillResourceInstaller {
 
-    private static final Pattern STARS_OR_LINE_BREAK = Pattern.compile("\\*++|\\R");
+    private static final Pattern EMPHASIS_TOKENS = Pattern.compile("\\\\[\\\\*]|\\*++|\\R");
 
     private static final List<String> RETIRED_SHIP_GUIDES = List.of(
             "auto-fix-loop.md",
@@ -165,17 +165,18 @@ class SkillResourceInstaller {
     private static BitSet closingEmphasis(String content) {
         BitSet closing = new BitSet();
         int openStars = 0;
-        Matcher runs = STARS_OR_LINE_BREAK.matcher(content);
+        Matcher runs = EMPHASIS_TOKENS.matcher(content);
         while (runs.find()) {
-            if (content.charAt(runs.start()) != '*') {
+            char first = content.charAt(runs.start());
+            if (first == '\\') {
+                continue;
+            }
+            if (first != '*') {
                 openStars = 0;
                 continue;
             }
             char before = runs.start() == 0 ? ' ' : content.charAt(runs.start() - 1);
             char after = runs.end() == content.length() ? ' ' : content.charAt(runs.end());
-            if (before == '\\') {
-                continue;
-            }
             int stars = runs.end() - runs.start();
             boolean followsWord = Character.isLetterOrDigit(before);
             if (!Character.isWhitespace(before) && (followsWord || !Character.isLetterOrDigit(after))) {

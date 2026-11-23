@@ -76,6 +76,10 @@ camel kit init --here [options]
 | `--silent` | `false` | Suppress all output (no banner, no TUI, no progress, no summary) -- useful for CI/scripted environments |
 | `-V`, `--version` | -- | Print camel-kit version and exit |
 
+If a symbolic link lies on the path from the workspace to the skills directory, `init` and `init --dry-run`
+report the link and exit with code 1. If `init` reports `Cannot inspect`, restore read and search access on
+the directory named in the message.
+
 **Examples:**
 
 ```bash

@@ -242,7 +242,7 @@ public class InitService {
         } catch (AccessDeniedException e) {
             throw InvalidAgentConfigurationException.unreadableDirectory(e);
         } catch (IOException e) {
-            throw new IOException("Initialization aborted: " + e.getMessage(), e);
+            throw new InvalidAgentConfigurationException("Initialization aborted: " + e.getMessage(), e);
         }
     }
 

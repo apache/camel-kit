@@ -185,6 +185,7 @@ class SkillPackCompilerTest {
     }
 
     @Test
+    @Tag("cli-compat")
     void codexAdaptsCommandMentionsAndPreservesLiteralPaths() throws Exception {
         Path pack = pack("docs", "add: {skill/docs: {contract: 1, resource: docs.md}, "
                                  + "skill/camel-inspect: {contract: 1, resource: inspect.md}}");
@@ -204,6 +205,8 @@ class SkillPackCompilerTest {
         prose += "\n- [Optional]: /docs to refresh\n[]: /docs\n[   ]: /docs\n*Use /docs*";
         prose += "\n[x]: /docs \"a\" b \"c\"\n[y]: /docs 'a' b 'c'\n[z]: /docs (a) b (c)";
         prose += "\n***Use /docs** and /docs*\n*Use *this* /docs*";
+        prose += "\n\\**Use /docs*\n\\***Use /docs**\n\\\\*Use /docs*";
+        literal += "\n\\*Use /docs*\n\\\\\\*Use /docs*";
         String example = "[" + "{\"id\":1,\"route\":\"inventory\"},".repeat(2000) + "{\"id\":2}]";
         literal += "\n" + "rm /docs*\n".repeat(20_000);
         write("docs", "docs.md", SKILL.replace("camel-inspect", "docs") + prose + "\n" + literal + "\n" + example);

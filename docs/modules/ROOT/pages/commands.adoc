@@ -60,6 +60,10 @@ camel-kit init --here [options]
 | `--silent` | `false` | No banner, TUI, progress or summary, for scripted use
 |===
 
+If a symbolic link lies on the path from the workspace to the skills directory, `init` and `init --dry-run`
+report the link and exit with code 1. If `init` reports `Cannot inspect`, restore read and search access on
+the directory named in the message.
+
 When a new distribution drops a skill, guide or command stub, `init --force` removes the recorded, unmodified
 file in the selected assistant's directories. Git line-ending conversion is recognized for text resources.
 An edited or unrecorded skill can remain discoverable until you move or remove it manually.
