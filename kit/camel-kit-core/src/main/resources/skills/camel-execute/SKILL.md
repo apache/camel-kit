@@ -626,7 +626,9 @@ When isolation is supported, only the structured report flows back to the orches
 
 After the cross-cutting review, run the full verification loop in an isolated subagent when supported, or inline otherwise.
 
-1. Run the verification role with:
+1. Give the verifier this assignment, including when it starts with a fresh context:
+   "Verify the completed implementation for Execute Step 3.5 and return the structured verification report."
+   Supply:
    - The `camel-verify` skill (`skills/camel-verify/SKILL.md`)
    - Both guides: `verify-loop.md` and `error-taxonomy.md`
    - Project configuration (runtime, Camel version, module path)

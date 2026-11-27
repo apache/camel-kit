@@ -75,7 +75,7 @@ frontmatter must match the manifest. Only the router sets `user_invocable: true`
 | `camel-migrate` | `pipeline` | `camel-start` (migration) | Vendor-aware risk, retirement, and safe-seam analysis plus design; hands an approved design to `camel-plan`. In direct mode, implements route files under Iron Laws 1 and 2 with inline validation and user-authorized runtime check |
 | `camel-verify` | `internal` | `camel-execute` (internal role: subagent where supported, inline otherwise) | 3-phase runtime verification loop (build, Citrus tests, report) — runs inside execute, not as a standalone pipeline stage |
 | `camel-ship` | `standalone` | -- (standalone CLI delegate) | **Technology Preview.** Forwards to the configured local Ship command; the controller owns stages, run state, and oversight |
-| `camel-design` | `internal` | `camel-brainstorm` | Guides for component selection, EIP catalog, and flow design assembly |
+| `camel-design` | `internal` | `camel-brainstorm` and `camel-migrate` (phase 2) | Guides for component selection, EIP catalog, and flow design assembly |
 | `camel-implement` | `internal` | `camel-execute` | Guides for YAML generation, properties, Docker Compose, DataMapper |
 | `camel-validate` | `pipeline` | `camel-execute` or direct invocation | Tier 1 quality gate: schema validation, endpoint verification, security analysis |
 | `camel-test` | `internal` | `camel-execute` | Guides for route analysis and test generation with Citrus + Testcontainers |
@@ -986,7 +986,7 @@ user_invocable: false
 
 3. **Write guide files** in `guides/`. Each guide is a self-contained markdown instruction file loaded by the agent when the skill is active.
 
-4. **Register every core skill** in the [workflow manifest](../kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml) using the criteria above `skills`. Set `generated_command` to the public command name or to `null` for an internal helper. Update stages, artifacts, transitions and MCP tool allowlists when they change.
+4. **Register every core skill** in the [workflow manifest](../kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml) using the criteria above `skills`. For a public skill, add a `commands` entry with `user_facing: true` and `generated_stub: true`, and set the skill’s `generated_command` to that command’s name. For an internal helper, set `generated_command: null`. Update stages, artifacts, transitions and MCP tool allowlists when they change.
 
 5. **If registering generated command or skill entry points:** update agent-specific guidance only where the command needs custom behavior beyond the generated stub or project skill. The default generator creates command stubs from the manifest. Agent templates still need updates when they contain human-readable command tables, custom modes, policies, or sub-agent dispatch:
    - Claude Code: update `templates/claude/claude-md.md`

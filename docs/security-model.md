@@ -880,7 +880,7 @@ generated code accepted without review; destructive shell commands issued by an 
 For the **developer** (who is also the route author and the operator of the machine):
 
 1. **Treat analysis of a third-party tree as reading untrusted input, and treat building or running it as executing
-   untrusted code.** `camel-kit graph` and `init --here` only read (P1); `/camel-execute`, `/camel-verify`,
+   untrusted code.** `camel-kit graph` and `init --here` only read (P1). `/camel-execute` (including its internal `camel-verify` phase),
    `/camel-debug` and Ship validation *build and start* projects, which runs Maven plugins and Camel components.
    Decide that separately for anything you did not write.
 2. **Keep the harness's permission model on.** Do not run Camel-Kit skills under a harness mode that skips

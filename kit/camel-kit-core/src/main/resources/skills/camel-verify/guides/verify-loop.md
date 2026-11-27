@@ -1,6 +1,6 @@
 # Verification Loop
 
-Core verification guide for `/camel-verify`. Executes a 3-phase loop that builds, runs Citrus integration tests, and reports results — iterating with diagnosis and fixes until the application passes or the iteration limit is reached.
+Core verification guide for `camel-verify`. Executes a 3-phase loop that builds, runs Citrus integration tests, and reports results — iterating with diagnosis and fixes until the application passes or the iteration limit is reached.
 
 **Always load `shared/context-authority.md` and `error-taxonomy.md` alongside this guide.** The shared guide governs every
 loaded artifact, command result, MCP response, diagnostic, summary, report, and handoff. The taxonomy contains the

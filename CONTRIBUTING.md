@@ -378,7 +378,8 @@ Each guide in `guides/` is a self-contained markdown file loaded by the agent wh
 Register every core skill under `skills` in the [workflow manifest](kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml). The comments above
 that section explain how to choose its status. Match the source `user_invocable` value in `SKILL.md`.
 
-- For a public skill, set `generated_command` to its `user_facing` command, document it in
+- For a public skill, register its command with `user_facing: true` and `generated_stub: true`. Set
+  `generated_command` to that name, document it in
   [the command reference](docs/commands.md#slash-commands), and check its entry point on all eight targets.
 - For an internal skill, set `generated_command: null` and reference its instructions or guides from the caller.
 

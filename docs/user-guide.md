@@ -310,7 +310,7 @@ flowchart TB
         subgraph "Internal Skills"
             I["camel-implement"]
             T["camel-test"]
-            R["/camel-verify (internal)"]
+            R["camel-verify (internal)"]
         end
     end
     subgraph "Phase 4: Validate"
@@ -630,13 +630,13 @@ action still requires the named operator's separate execution-time authorization
 
 ## 6. Verification
 
-### `/camel-verify` (Internal to `/camel-execute`)
+### `camel-verify` (Internal to `/camel-execute`)
 
 Verification is a structured 3-phase feedback loop that builds the project, runs Citrus integration tests via `camel test run`, diagnoses errors, applies fixes, and retries until all tests pass or the iteration limit is reached. Citrus tests are self-contained: Testcontainers manage external services and `camel:jbang:run` starts the Camel integration within the test.
 
 **When it runs:**
 - **Automatically once** inside `/camel-execute`, after all implementation tasks and their reviews complete
-- `/camel-verify` is not a standalone user-facing command. For standalone quality checks after execution, use `/camel-validate`.
+- Use `/camel-debug` for standalone troubleshooting and `/camel-validate` for a static quality check.
 
 ### The 3 Phases
 

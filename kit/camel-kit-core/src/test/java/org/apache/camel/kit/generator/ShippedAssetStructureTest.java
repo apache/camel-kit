@@ -273,6 +273,12 @@ class ShippedAssetStructureTest {
                 assertFalse(Files.exists(ctx.projectDir().resolve(legacyCommands)),
                         agentName + " must not generate command scaffolding");
             }
+            String skills = ctx.agent().skillsDirectory() + "/";
+            assertGeneratedContains(ctx, agentName, skills + "camel-execute/SKILL.md",
+                    "for Execute Step 3.5 and return the structured verification report");
+            assertGeneratedContains(ctx, agentName, skills + "camel-verify/SKILL.md", "Execute Step 3.5",
+                    "standalone troubleshooting", agentName.equals("codex") ? "`$camel-debug`" : "`/camel-debug`");
+            assertGeneratedContains(ctx, agentName, skills + "camel-verify/guides/verify-loop.md", "`camel-verify`");
             assertGeneratedContextAuthority(agentName, ctx);
             assertGeneratedMigrationOperationsGuides(agentName, ctx);
             assertGeneratedMarkdownResolvesCommandPrefix(agentName, ctx);
