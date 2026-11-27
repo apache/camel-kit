@@ -1,6 +1,6 @@
 # Camel-Kit Command Reference
 
-This document is the reference for all Camel-Kit commands: the `camel-kit` CLI, slash commands used inside most AI coding assistants, and native project skills used by Codex CLI and GitHub Copilot CLI.
+This guide covers the `camel-kit` CLI and the skills you can invoke in your coding assistant.
 
 The `--ai bob2` target exposes the nine public workflows through native skills:
 `$camel-*` in Bob Shell and `/camel-*` in Bob IDE. Legacy command stubs remain
@@ -27,8 +27,9 @@ retains its single CLI invocation with the supplied options.
   - [/camel-migrate](#camel-migrate)
   - [/camel-validate](#camel-validate)
   - [/camel-ship](#camel-ship)
+  - [/camel-knowledge](#camel-knowledge)
   - [/camel-debug](#camel-debug)
-  - [/camel-verify (internal)](#camel-verify)
+  - [camel-verify (internal)](#camel-verify)
 - [Command Cheat Sheet](#command-cheat-sheet)
 
 ---
@@ -612,11 +613,14 @@ camel-kit doc unstale docs/camel-kit/001-order-processing/implementation-plan.md
 
 ## Slash Commands
 
-These commands are used inside your AI coding assistant after project initialization. The entry point is `/camel-start`, which routes to the right pipeline skill. Skills are organized into tiers:
+Start with `/camel-start` to route a request, or invoke any of the nine public skills directly.
+The examples below use slash commands. See the [entry points for each assistant](modules/ROOT/pages/skills.adoc#entry-points)
+for Bob Shell and Codex `$camel-*` mentions, Pi `/skill:camel-*` commands and other native forms.
 
-The machine-readable source of truth for command names, generated stubs, skill visibility, pipeline stages, transitions, artifacts, and MCP tool filters is `kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml`. Command generation and Doctor read the effective workflow from the built skill catalog. Update the core workflow YAML before changing this reference text or the corresponding core skill frontmatter.
+The [core workflow manifest](../kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml) defines the classification. Command generation and
+Doctor use the effective workflow from the built skill catalog.
 
-**Tier 1 — Pipeline:** `/camel-brainstorm`, `/camel-migrate`, `/camel-plan`, `/camel-execute`, `/camel-validate` — five skills implementing a four-stage pipeline, with brainstorm and migrate as alternative Design-stage entries. Invoke them via the `/camel-start` decision tree or directly via slash command.
+**Tier 1 — Pipeline:** `/camel-brainstorm`, `/camel-migrate`, `/camel-plan`, `/camel-execute`, `/camel-validate` — five skills implementing a four-stage pipeline, with brainstorm and migrate as alternative Design-stage entries. Invoke them via the `/camel-start` decision tree or directly with the inputs for that stage.
 
 **Tier 2 — Standalone utilities:** `/camel-ship`, `/camel-knowledge`, `/camel-debug` — can be invoked at any point. Ship delegates to a separate local controller and does not use the manual pipeline state as its run state.
 
@@ -788,7 +792,7 @@ first. Markdown-only plans remain supported for older artifacts.
    - **Code quality review** -- checks constitution rules, security, and anti-patterns
    - If review fails, the implementer fixes and re-submits until both reviews pass
 4. **Cross-cutting review** -- after all tasks complete, reviews all generated routes together for consistency
-5. **Verification phase** -- dispatches `/camel-verify` internally (build, Citrus tests, report). Verification failures are reported but do not block completion
+5. **Verification phase** -- dispatches `camel-verify` internally (build, Citrus tests, report). Verification failures are reported but do not block completion
 6. **Completion summary** -- writes the execution report and reports task, review, and verification outcomes
 
 After `/camel-execute` completes, the pipeline continues to `/camel-validate` as the final quality gate.
@@ -804,12 +808,12 @@ After `/camel-execute` completes, the pipeline continues to `/camel-validate` as
 
 **Orchestrated internal skills:**
 
-During execution, `/camel-execute` dispatches these internal skills as needed. They are never invoked directly by the user:
+During execution, `/camel-execute` supplies the context for three internal helpers.
 
 | Internal Skill | Role |
 |---|---|
 | `camel-implement` | Generate Camel YAML DSL routes from the approved design spec and implementation plan |
-| `/camel-verify` | Runtime verification loop: build, start, diagnose errors, apply fixes |
+| `camel-verify` | Runtime verification loop: build, start, diagnose errors, apply fixes |
 | `camel-test` | Generate Citrus integration tests |
 
 ---
@@ -1108,6 +1112,14 @@ GitHub Copilot CLI now uses its native `.github/skills/` surface exclusively. Ol
 
 ---
 
+### /camel-knowledge
+
+Ask a documentation, component, release or security advisory question, for example
+`/camel-knowledge Which options does the Kafka component support?` The skill uses the Knowledge MCP server
+to return findings with sources. Brainstorm and Execute can also use it during a pipeline.
+
+---
+
 ### /camel-debug
 
 **Purpose:** Ad-hoc troubleshooting for broken Camel routes outside of a pipeline run. Follows a structured STOP → PRESERVE → DIAGNOSE → FIX → GUARD workflow.
@@ -1132,7 +1144,7 @@ GitHub Copilot CLI now uses its native `.github/skills/` surface exclusively. Ol
 4. **FIX** -- explain the proposed fix, apply minimal targeted changes, and verify the fix resolves the issue. A direct user request to fix authorizes normal in-scope repair; a diagnosis-only request pauses for approval before changing files. Up to 5 fix attempts are allowed before escalating.
 5. **GUARD** -- suggest a preventive measure (test, validation rule, CI check) to prevent recurrence.
 
-**Error classification:** Reuses the same structured error taxonomy as `/camel-verify`:
+**Error classification:** Reuses the same structured error taxonomy as `camel-verify`:
 
 | Category | Examples | Fix Target |
 |---|---|---|
@@ -1151,21 +1163,15 @@ Normal actions independently selected by the shipped debug workflow from validat
 
 ---
 
-### /camel-verify
+### camel-verify
 
-> **Internal skill** -- dispatched automatically by `/camel-execute`. Not intended for standalone use. For quality checks after the pipeline completes, use `/camel-validate`.
-
-**Purpose:** Runtime verification feedback loop that builds, starts, diagnoses errors, applies fixes, and retries until the application runs correctly or the iteration limit is reached.
-
-**When to use:** This skill is invoked internally by `/camel-execute` during its verification phase. Users should not run it directly; use `/camel-validate` for post-pipeline quality validation.
+`/camel-execute` supplies the generated application and tests to `camel-verify` and incorporates its build and
+test results into the execution report. For a broken route outside Execute, use `/camel-debug`.
+For a static quality check, use `/camel-validate`.
 
 **Produces:**
 - Verification report (printed to console)
 - Fixes applied to project files (pom.xml, route YAML, properties, etc.)
-
-**Example:**
-
-No direct user invocation. `/camel-execute` dispatches this skill internally during its verification phase.
 
 **How it works (3-phase loop):**
 

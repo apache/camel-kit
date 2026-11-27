@@ -94,10 +94,18 @@ commands:
     generated_stub: false
     user_facing: false
     tier: internal
-    description: "Build, test, diagnose, and fix a Camel application iteratively."
+    description: "Internal runtime verification for camel-execute. Builds and tests the generated integration and reports the result to Execute."
     standalone: false
     chained: true
 
+# Classify each core skill by the task a developer can start with it.
+#   router: selects the workflow for a request whose next stage is undecided.
+#   pipeline: performs a named stage, entered directly with its inputs or by handoff.
+#   standalone: delivers a result independently of the manual pipeline, even when a stage also uses it.
+#   internal: supplies guides or performs work whose inputs and result belong to a calling workflow.
+# A public skill names its user_facing command in generated_command. Internal skills use null.
+# Only the core router sets user_invocable in its source frontmatter to true. Each host exposes
+# public commands through native skills or stubs. Its picker may also list installed internal guides.
 skills:
   - name: camel-start
     user_invocable: true

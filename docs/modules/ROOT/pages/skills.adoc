@@ -28,12 +28,39 @@ xref:getting-started.adoc#existing-project[how to compare or accept a proposed f
 | Utility | `camel-debug` | `/camel-debug` | Troubleshooting of a broken route outside a pipeline
 |===
 
-Four internal skills are dispatched by the pipeline skills and have no command stub: `camel-design` (component
-selection, EIP catalog, design assembly), `camel-implement` (YAML routes, properties, Docker Compose, DataMapper),
-`camel-test` (Citrus integration tests) and `camel-verify` (build, test, diagnose and repair at runtime). They are
-the composition primitives the stages assemble. `camel-ship` is the outlier of its tier: its manifest is a short
-delegate that invokes the registered `camel-kit ship` command once and does not follow the guide-based structure
-described below.
+Four internal helpers supply the pipeline's instructions. Brainstorm uses `camel-design` for design choices.
+Execute uses `camel-implement` for routes and configuration, `camel-test` for Citrus tests, and
+`camel-verify` to build and test the resulting application and record the outcome in the execution report.
+Use `camel-debug` to investigate a failure outside Execute and `camel-validate` for a static quality check.
+
+[[entry-points]]
+== Invoking a public skill
+
+The nine public skills have an entry point on each supported assistant. For example, to debug a broken route:
+
+[cols="1,2,3"]
+|===
+| Assistant | Example | How the entry is installed
+
+| Claude Code | `/camel-debug` | Native skill under `.claude/skills/` in the development snapshot.
+See xref:agents.adoc#claude-native-skills[Claude skill discovery and upgrades].
+| IBM Bob 2 | `$camel-debug` in Bob Shell, `/camel-debug` in Bob IDE | Native picker entries under `.bob/skills/`.
+Kit also writes legacy command stubs. Bob Shell lists public skills in `/skills`.
+| Antigravity | `/camel-debug` or ask for `camel-debug` by name | Native skill under `.agents/skills/`.
+| Codex CLI | `$camel-debug` | Native skill under `.agents/skills/`. Open `/skills` to browse.
+| GitHub Copilot CLI | Ask Copilot to use the `camel-debug` skill | Native skill under `.github/skills/`.
+| OpenCode | `/camel-debug` | Command stub under `.opencode/commands/` loads the matching skill.
+| Qwen Code | `/camel-debug` | Command stub under `.qwen/commands/`. Qwen loads `/camel-ship` directly
+from its native skill so it can dispatch Ship work.
+| Pi | `/skill:camel-debug` | Native skill under `.pi/skills/` in a trusted project. Kit also generates
+`/camel-debug` and the other public prompt shortcuts except Ship. Use `/skill:camel-ship` to preserve quoted arguments.
+|===
+
+Kit generates command stubs only for public skills. Claude, Bob Shell and Qwen expose the nine public entries
+in their command or skill pickers. Antigravity and Codex also list the four installed helpers, as do
+Copilot's `skill list` inventory and OpenCode's command list. Pi omits the helpers from the model's skill list
+but still accepts an explicit `/skill:camel-verify`. Use the calling workflow for these helpers so they receive
+their inputs and return their results to the right stage.
 
 [[workflow-hooks]]
 == Running a required workflow hook
@@ -123,18 +150,11 @@ user_invocable: false
 ---
 ----
 
-In the shared source only `camel-start` sets `user_invocable: true`: it is the auto-discovered entry point. The
-pipeline and utility skills still get entry points, generated per agent: slash-command stubs where the agent uses
-them, and native project skills on Claude Code _(development snapshot only)_, Codex CLI and GitHub Copilot CLI.
-Generated copies may add runtime aliases: Copilot, Pi and Qwen add a hyphenated `user-invocable` field, Codex
-rewrites `+/camel-*+` invocations to `+$camel-*+` mentions. Bob 2 sets both fields to `true` for the nine public
-skills, so that Bob Shell lists them in `/skills` and the `+$camel-*+` picker. Claude Code sets
-`user-invocable: true` for all nine public skills and discovers them from `.claude/skills/` without command stubs.
-Internal skills keep `false` everywhere; on Claude Code,
-Copilot and Pi the four internal skills also get `disable-model-invocation: true`, which keeps the model from
-selecting them while the pipeline skills still read their guides as files. See
-xref:agents.adoc#claude-native-skills[native skill discovery on Claude Code]. The front matter must match the
-workflow manifest; a test enforces it.
+In the core source only `camel-start` sets `user_invocable: true`. The
+https://github.com/apache/camel-kit/blob/main/kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml[workflow manifest] records each skill's status and public command.
+The installed front matter depends on the assistant. For example, Bob 2 and Claude mark all nine public
+skills `user-invocable: true`. Claude, Copilot and Pi mark the four internal helpers
+`disable-model-invocation: true`. See <<entry-points>> for explicit invocation.
 
 [[progressive]]
 == Progressive disclosure
@@ -194,6 +214,6 @@ registration.
 [[adding]]
 == Adding a skill
 
-Create the directory with its manifest and guides, register the skill in the workflow manifest, and, for a
-user-invocable skill, in the templates of all eight agents and in the command reference. Run
-`ShippedAssetStructureTest` after any skill, template or trait change. See xref:contributing.adoc[].
+Register every core skill in the workflow manifest and check its generated entry points on all eight targets.
+Run `ShippedAssetStructureTest` after any skill, template or trait change.
+See xref:contributing.adoc#skills[adding a core skill] and xref:contributing.adoc#skill-packs[contributing a pack].

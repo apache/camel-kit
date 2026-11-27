@@ -1,6 +1,6 @@
 ---
 name: camel-verify
-description: Build, test, diagnose, and fix a Camel application iteratively.
+description: Internal runtime verification for camel-execute. Builds and tests the generated integration and reports the result to Execute.
 user_invocable: false
 ---
 
@@ -17,7 +17,7 @@ Maven compilation and Citrus testing retry up to 15 times; Camel Main startup re
 ## Invocation
 
 - **Internal only** — run by `camel-execute` after all implementation tasks, in an isolated subagent where supported or inline otherwise
-- This skill is NOT user-invocable. It runs as part of the execute phase, not as a standalone pipeline stage.
+- If selected directly for a failure outside Execute, direct the user to `/camel-debug`. Start the verification loop only when Execute dispatches it.
 
 ## Prerequisites
 
