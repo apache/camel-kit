@@ -30,7 +30,7 @@ user_invocable: false
 
 ## Prerequisites
 
-- `.camel-kit/config.properties` must exist (for runtime and version detection)
+- Resolve runtime and version using shared/direct-project.md from Kit metadata or the selected build and routes.
 - The project must have existing route files to debug
 
 ## Guides

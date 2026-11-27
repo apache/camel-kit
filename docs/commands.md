@@ -2,7 +2,7 @@
 
 This guide covers the `camel-kit` CLI and the skills you can invoke in your coding assistant.
 
-The `--ai bob2` target exposes the nine public workflows through native skills:
+The `--ai bob2` target exposes the eleven public workflows through native skills:
 `$camel-*` in Bob Shell and `/camel-*` in Bob IDE. Legacy command stubs remain
 installed for compatibility.
 See [Bob Shell setup and upgrading existing workspaces](user-guide.md#bob-shell-202)
@@ -29,6 +29,8 @@ retains its single CLI invocation with the supplied options.
   - [/camel-ship](#camel-ship)
   - [/camel-knowledge](#camel-knowledge)
   - [/camel-debug](#camel-debug)
+  - [/camel-citrus](#camel-citrus)
+  - [/camel-prototype](#camel-prototype)
   - [camel-verify (internal)](#camel-verify)
 - [Command Cheat Sheet](#command-cheat-sheet)
 
@@ -513,6 +515,7 @@ camel-kit doc <subcommand> [options]
 | Subcommand | Description |
 |------------|-------------|
 | `init --by <skill> [--from <source>] <file>` | Add generation frontmatter; omit `--from` for root artifacts |
+| `publish-validation --project <root> --input <draft> [--pipeline <id>]` | Move a completed `docs/validation-report-draft-<name>.md` to a fresh timestamped report or the explicitly selected pipeline report |
 | `check <file>` | Query document staleness status — outputs JSON to stdout |
 | `stale --reason "..." [--cascade] <file>` | Mark a document as stale |
 | `unstale <file>` | Clear staleness from a document |
@@ -613,7 +616,7 @@ camel-kit doc unstale docs/camel-kit/001-order-processing/implementation-plan.md
 
 ## Slash Commands
 
-Start with `/camel-start` to route a request, or invoke any of the nine public skills directly.
+Start with `/camel-start` to route a request, or invoke any of the eleven public skills directly.
 The examples below use slash commands. See the [entry points for each assistant](modules/ROOT/pages/agents.adoc#entry-points)
 for Bob Shell and Codex `$camel-*` mentions, Pi `/skill:camel-*` commands and other native forms.
 
@@ -622,7 +625,7 @@ Doctor use the effective workflow from the built skill catalog.
 
 **Tier 1 — Pipeline:** `/camel-brainstorm`, `/camel-migrate`, `/camel-plan`, `/camel-execute`, `/camel-validate` — five skills implementing a four-stage pipeline, with brainstorm and migrate as alternative Design-stage entries. Invoke them via the `/camel-start` decision tree or directly with the inputs for that stage.
 
-**Tier 2 — Standalone utilities:** `/camel-ship`, `/camel-knowledge`, `/camel-debug` — can be invoked at any point. Ship delegates to a separate local controller and does not use the manual pipeline state as its run state.
+**Tier 2 — Standalone utilities:** `/camel-ship`, `/camel-knowledge`, `/camel-debug`, `/camel-citrus`, `/camel-prototype` — can be invoked at any point. Ship delegates to a separate local controller and does not use the manual pipeline state as its run state.
 
 **Internal skill libraries:** `camel-implement`, `camel-verify`, `camel-test`, `camel-design` — invoked automatically by pipeline skills, using isolated subagents where supported and same-session execution otherwise. Not exposed as direct slash-command stubs.
 
@@ -977,8 +980,8 @@ Migration questions use one `[Concern N of M]` or `[Clarification N of M]` block
 **When to use:** After `/camel-execute` completes, or whenever generated routes need quality validation outside a controller-owned Ship run.
 
 **Produces:**
-- Pipeline-scoped report at `docs/camel-kit/<PIPELINE_ID>/validation-report.md` when pipeline context exists
-- Timestamped project-scoped report at `docs/validation-report-YYYY-MM-DD_HH-mm.md` when no pipeline exists
+- Pipeline-scoped report at `docs/camel-kit/<PIPELINE_ID>/validation-report.md` for an explicit ID or Execute handoff
+- UTC-timestamped project-scoped report at `docs/validation-report-YYYY-MM-DD_HH-mm.md` for a bare direct call, including during an active migration
 - Categorized findings: PASS / FAIL / WARN per quality dimension
 - Constitution compliance check (all 8 rules)
 - Recommendations for priority fixes
@@ -1123,6 +1126,18 @@ GitHub Copilot CLI now uses its native `.github/skills/` surface exclusively. Ol
 **Example:** `/camel-knowledge Which options does the Kafka component support?`
 
 ---
+
+### /camel-citrus
+
+Name the route and expected outcome, for example `/camel-citrus test the orders route with an empty order`.
+The assistant resolves the target project and Citrus version and uses the same test guides as Execute.
+Ask to run a selected test for observed results.
+
+### /camel-prototype
+
+Try `/camel-prototype copy an order file to an outbox`. The assistant creates the route, sample input,
+required local setup and a README with the run command. Ask to run it. Use `/camel-prototype continue` to
+carry the files, service choices and actual results into Brainstorm, including in a new session.
 
 ### /camel-debug
 

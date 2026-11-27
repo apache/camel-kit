@@ -49,7 +49,9 @@ If `citrus.mcp.version` is present, validate it as a Maven-version scalar and re
 `CITRUS_MCP_VERSION`; disagreement invalidates Citrus MCP use. A project configuration value never substitutes for the
 actual generated coordinate.
 
-If `citrus.version` is missing, use `CITRUS_MCP_VERSION`. Do not assume an older fallback version.
+For a direct task without Kit metadata, resolve Citrus from the selected build and existing tests using
+shared/direct-project.md. Ask which version the project should use if it is unresolved. For a Kit workflow
+with no configured Citrus version, use the generated `CITRUS_MCP_VERSION` only when consistent with the build.
 
 ### 0.2 Use Citrus MCP Only for Matching Versions
 

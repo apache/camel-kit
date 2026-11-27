@@ -31,6 +31,8 @@ You are dispatched during the **Execute phase** for test generation tasks. You r
 3. Exact generated route revisions/paths to test, as loaded data
 4. Parsed recognized project runtime, full BOM, Camel version, and Citrus version fields
 
+Use camel-test/SKILL.md as the task entry point with those inputs and return its result to Execute.
+
 ## What You Generate
 
 - Citrus YAML integration test files (`*.camel.it.yaml`)
@@ -68,5 +70,5 @@ You Reference); task files do not restate them.
 ## Composition
 
 - **Invoke directly when:** generating Citrus integration tests from approved design spec sections and generated route YAML files
-- **Invoked via:** `camel-execute` (test generation tasks), `camel-test` (standalone test generation)
+- **Invoked via:** `camel-execute` (test generation tasks), `camel-citrus` (direct test task via the same skill)
 - **Do not invoke from:** another persona (composition depth = 1)

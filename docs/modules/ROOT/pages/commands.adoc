@@ -162,11 +162,16 @@ Manages the provenance and staleness of pipeline artifacts through YAML front ma
 ----
 camel-kit doc init --by <skill> [--from <source>] <file>
 camel-kit doc check <file> [--project <root>]
+camel-kit doc publish-validation --project <root> --input <draft> [--pipeline <id>]
 camel-kit doc snapshot --project <root> --source <path> [--source <path> ...]
 camel-kit doc record <file> --project <root> --snapshot <json> --evidence <report> --result <complete|partial|failed>
 camel-kit doc stale --reason "..." [--cascade] <file>
 camel-kit doc unstale <file>
 ----
+
+`doc publish-validation` moves a nonempty `docs/validation-report-draft-<name>.md` to the report path it prints.
+A project report gets a numeric suffix when the minute's filename is taken. Only `--pipeline` selects an
+existing pipeline directory. See xref:camel-validate.adoc[].
 
 With `--project`, `doc check` also checks the source-bound review receipt and reports `unchanged`, `stale` or
 `unverified`, with `reconciliation.changedPaths` identifying changed inputs. Without it, the legacy behavior below is preserved. `snapshot` captures review inputs; `record` binds a
@@ -272,11 +277,12 @@ camel-kit ship --submit RUN_ID --result PATH [--json]
   xref:camel-plan.adoc[]
 | `/camel-execute` | Wave-based implementation with adversarial, spec and quality reviews and one runtime
   verification pass; `/camel-execute <pipeline-id>` runs standalone | xref:camel-execute.adoc[]
-| `/camel-validate` | Static quality report of the generated routes; with a pipeline ID, the active pipeline, or the
-  whole project | xref:camel-validate.adoc[]
+| `/camel-validate` | Check the selected project, or the pipeline explicitly named by you or Execute | xref:camel-validate.adoc[]
 | `/camel-ship` | Forwards its options once to `camel-kit ship` (Technology Preview) | xref:ship.adoc[]
 | `/camel-knowledge` | Apache Camel documentation questions through the Knowledge MCP server |
   xref:knowledge.adoc#skill[Knowledge MCP]
+| `/camel-citrus` | Author or run Citrus tests for selected routes | xref:skills.adoc#developer-tasks[Direct tasks]
+| `/camel-prototype [continue]` | Create a runnable sample or take a saved sample into design | xref:skills.adoc#developer-tasks[Direct tasks]
 | `/camel-debug` | Diagnosis and repair of a broken route outside a pipeline | xref:camel-debug.adoc[]
 |===
 
@@ -304,4 +310,5 @@ camel-kit ship --document requirements.md        # Technology Preview
 /camel-brainstorm   /camel-migrate               # design stage
 /camel-plan         /camel-execute   /camel-validate
 /camel-knowledge    /camel-debug     /camel-ship
+/camel-citrus       /camel-prototype
 ----

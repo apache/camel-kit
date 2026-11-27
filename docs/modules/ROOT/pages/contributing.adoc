@@ -96,6 +96,11 @@ xref:skills.adoc[] for the structure and the tiers.
 [[skill-packs]]
 == Contributing a skill pack
 
+The distribution's core descriptor re-exports its bundled developer tasks. Its dependency can name
+classified skill trees in `bundledSkills` to retain the original `skills/<name>/` paths for every caller and
+host trait. Existing overlays that require `core` can still replace those trees' contributions.
+Third-party packs declare their own skills under `add`.
+
 Put a descriptor in `src/main/resources/META-INF/camel-kit/packs/<id>/pack.yaml`.
 Resource paths in the descriptor are relative to that directory. Pack IDs and the names of skills, stages,
 steps and providers start with a lowercase ASCII letter and continue with lowercase letters, digits or hyphens.

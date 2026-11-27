@@ -62,7 +62,10 @@ layer.
 === Build-time skill packs
 
 A distribution selects pack modules when it builds Kit. The core workflow manifest supplies the existing commands,
-stages, artifacts and MCP tools. The core pack supplies the thirteen shipped skills and their shared files.
+stages, artifacts and MCP tools. Core owns routing, workflow orchestration, the Ship delegate and shared files. The bundled
+`developer-tasks` pack owns the complete classified skill trees for validation, debugging, knowledge, design
+guides, implementation guides, testing, verification, Citrus and prototypes. Their paths remain stable for
+callers and overlays. The xref:skills.adoc#tiers[skill inventory] lists the entry points.
 Additional packs can supply skills, files, Java provider bindings and instructions for a named step.
 An instructions-only pack needs a descriptor and its Markdown resource.
 
@@ -80,7 +83,7 @@ The package and resource enumeration order has no precedence.
 composed instructions at the declared step. Public pack skills appear in the installed `camel-start` decision
 tree and in host instructions that list direct commands. Doctor checks the commands, skills and supporting files
 against the same catalog. The default selection exposes
-the existing nine public commands and keeps the four internal skills available to their callers.
+eleven public commands and keeps the four internal skills available to their callers.
 An executable step names one bundled skill or Java provider, the supported targets and its required checks.
 The assistant supplies the source scope, selected target and evidence paths. Kit resolves the handler and binds
 the request to the SHA-256 of each file. Both kinds of handler use the same request and result.

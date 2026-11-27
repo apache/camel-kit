@@ -2,6 +2,10 @@
 
 > Seven non-negotiable laws enforced across ALL pipeline phases. No exceptions. No workarounds. No "just this once."
 
+Direct prototypes and one-off Citrus tests follow `shared/direct-project.md`. Preserve catalog and input checks.
+The pipeline approval and mandatory execution gates govern application implementation; a sample stays isolated,
+with transactions and observability only on request. Begin design only on an explicit prototype handoff.
+
 **Violating the letter of these rules is violating the spirit of these rules.**
 
 ---

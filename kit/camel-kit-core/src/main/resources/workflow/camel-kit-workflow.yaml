@@ -88,6 +88,24 @@ commands:
     description: "Ad-hoc troubleshooting for broken Camel routes outside of a pipeline run."
     standalone: true
     chained: false
+  - name: camel-citrus
+    aliases: [citrus]
+    skill: camel-citrus
+    generated_stub: true
+    user_facing: true
+    tier: utility
+    description: "Author and optionally run Citrus integration tests for selected Camel routes."
+    standalone: true
+    chained: false
+  - name: camel-prototype
+    aliases: [prototype]
+    skill: camel-prototype
+    generated_stub: true
+    user_facing: true
+    tier: utility
+    description: "Try a runnable Camel integration sample before starting a design."
+    standalone: true
+    chained: false
   - name: camel-verify
     aliases: [verify]
     skill: camel-verify
@@ -134,7 +152,7 @@ skills:
     user_invocable: false
     status: pipeline
     generated_command: camel-execute
-    requires: [skill/camel-knowledge]
+    requires: [skill/camel-knowledge, skill/camel-test, skill/camel-implement, skill/camel-verify, skill/camel-validate]
   - name: camel-validate
     user_invocable: false
     status: pipeline
@@ -151,6 +169,17 @@ skills:
     user_invocable: false
     status: standalone
     generated_command: camel-debug
+  - name: camel-citrus
+    user_invocable: false
+    status: standalone
+    generated_command: camel-citrus
+    requires: [skill/camel-test]
+  - name: camel-prototype
+    user_invocable: false
+    status: standalone
+    generated_command: camel-prototype
+    requires: [skill/camel-brainstorm, resource/camel-prototype/examples/copy.camel.yaml.template, resource/camel-prototype/examples/order.txt,
+               resource/camel-prototype/examples/README.md.template]
   - name: camel-verify
     user_invocable: false
     status: internal

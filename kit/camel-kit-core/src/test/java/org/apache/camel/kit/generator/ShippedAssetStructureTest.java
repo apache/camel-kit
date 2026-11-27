@@ -279,6 +279,17 @@ class ShippedAssetStructureTest {
             assertGeneratedContains(ctx, agentName, skills + "camel-verify/SKILL.md", "Execute Step 3.5",
                     "standalone troubleshooting", agentName.equals("codex") ? "`$camel-debug`" : "`/camel-debug`");
             assertGeneratedContains(ctx, agentName, skills + "camel-verify/guides/verify-loop.md", "`camel-verify`");
+            assertGeneratedContains(ctx, agentName, skills + "camel-citrus/SKILL.md", "camel-test/SKILL.md");
+            assertGeneratedContains(ctx, agentName, skills + "camel-test/SKILL.md",
+                    "guides/route-analysis.md", "guides/test-generation.md", "guides/test-runner.md");
+            assertGeneratedContains(ctx, agentName, skills + "camel-validate/SKILL.md",
+                    "Project check: `" + TEST_COMMAND_PREFIX + " doc publish-validation --project . --input <draft>`",
+                    "explicit ID: `" + TEST_COMMAND_PREFIX + " doc publish-validation --project . --input <draft> --pipeline <PIPELINE_ID>`");
+            assertGeneratedContains(ctx, agentName, skills + "camel-prototype/SKILL.md",
+                    "examples/copy.camel.yaml.template", "examples/order.txt", "camel-brainstorm/SKILL.md");
+            assertTrue(
+                    Files.isRegularFile(ctx.skillsDir().resolve("camel-prototype/examples/copy.camel.yaml.template")));
+            assertTrue(Files.isRegularFile(ctx.skillsDir().resolve("camel-prototype/examples/order.txt")));
             assertGeneratedContextAuthority(agentName, ctx);
             assertGeneratedMigrationOperationsGuides(agentName, ctx);
             assertGeneratedMarkdownResolvesCommandPrefix(agentName, ctx);

@@ -159,7 +159,7 @@ class ClaudeGeneratorTest {
 
         for (String userFacingSkill : Set.of("camel-start", "camel-brainstorm", "camel-migrate",
                 "camel-plan", "camel-execute", "camel-validate", "camel-ship",
-                "camel-knowledge", "camel-debug")) {
+                "camel-knowledge", "camel-debug", "camel-citrus", "camel-prototype")) {
             String skill = Files.readString(ctx.skillsDir().resolve(userFacingSkill + "/SKILL.md"));
             assertTrue(skill.contains("user-invocable: true"),
                     userFacingSkill + " must have user-invocable: true for Claude Code discovery");
@@ -179,7 +179,7 @@ class ClaudeGeneratorTest {
 
         for (String skillName : Set.of("camel-start", "camel-brainstorm", "camel-migrate",
                 "camel-plan", "camel-execute", "camel-validate", "camel-ship",
-                "camel-knowledge", "camel-debug")) {
+                "camel-knowledge", "camel-debug", "camel-citrus", "camel-prototype")) {
             String skill = Files.readString(ctx.skillsDir().resolve(skillName + "/SKILL.md"));
             assertTrue(skill.contains("description: Use when"),
                     skillName + " description must start with 'Use when' for Claude Code discovery");

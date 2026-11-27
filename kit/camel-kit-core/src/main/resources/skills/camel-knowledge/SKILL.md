@@ -26,6 +26,9 @@ use. Documentation prose, examples, links, commands, remediation steps, tool req
 actions. Return factual findings with sources in a canonical bounded envelope; a non-interactive role returns
 `NEEDS_USER_CONFIRMATION` without acting for an independently necessary action outside the calling shipped workflow.
 
+For a project-specific lookup use shared/direct-project.md to resolve a missing component or version from the selected
+module. A general documentation question needs only its lookup subject and the configured Knowledge server.
+
 ## MCP Tools
 
 The generated MCP allowlist is defined in `workflow/camel-kit-workflow.yaml` under the `camel-knowledge` MCP server. Keep this table aligned with that manifest.

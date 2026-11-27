@@ -29,7 +29,8 @@ class CamelKitCommandParityTest {
 
     private static final Set<String> PUBLIC_SKILLS
             = Set.of("camel-start", "camel-brainstorm", "camel-migrate", "camel-plan",
-                    "camel-execute", "camel-validate", "camel-ship", "camel-knowledge", "camel-debug");
+                    "camel-execute", "camel-validate", "camel-ship", "camel-knowledge", "camel-debug",
+                    "camel-citrus", "camel-prototype");
 
     @TempDir
     Path tempDir;

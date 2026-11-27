@@ -11,7 +11,7 @@ unmodified skills and guides. For each local conflict it keeps your file and sav
 xref:getting-started.adoc#existing-project[how to compare or accept a proposed file].
 
 [[tiers]]
-== Thirteen skills in four tiers
+== Skill tiers and callers
 
 [cols="1,1,1,3"]
 |===
@@ -25,6 +25,8 @@ xref:getting-started.adoc#existing-project[how to compare or accept a proposed f
 | Pipeline | `camel-validate` | `/camel-validate` | Static route quality validation
 | Utility | `camel-ship` | `/camel-ship` | Technology Preview: delegate to the local Ship controller
 | Utility | `camel-knowledge` | `/camel-knowledge` | Apache Camel documentation questions
+| Utility | `camel-citrus` | `/camel-citrus` | Author or run integration tests for selected routes
+| Utility | `camel-prototype` | `/camel-prototype` | Try a runnable sample and optionally take it into design
 | Utility | `camel-debug` | `/camel-debug` | Troubleshooting of a broken route outside a pipeline
 |===
 
@@ -37,15 +39,39 @@ Use `camel-debug` to investigate a failure outside Execute and `camel-validate` 
 [[entry-points]]
 == Invoking a public skill
 
-You can invoke all nine public skills directly. Use the syntax for your assistant in the
+You can invoke all eleven public skills directly. Use the syntax for your assistant in the
 xref:agents.adoc#entry-points[public skill entry points table]. For example, replace `camel-start` with
 `camel-debug` to troubleshoot a route. The table also explains how to invoke Ship on Pi and Qwen.
 
-Kit generates command stubs only for public skills. Claude, Bob Shell and Qwen expose the nine public entries
+Kit generates command stubs only for public skills. Claude, Bob Shell and Qwen expose the eleven public entries
 in their command or skill pickers. Antigravity and Codex also list the four installed helpers, as do
 Copilot's `skill list` inventory and OpenCode's command list. Pi omits the helpers from the model's skill list
 but still accepts an explicit `/skill:camel-verify`. Use the calling workflow for these helpers so they receive
 their inputs and return their results to the right stage.
+
+[[developer-tasks]]
+== Working directly in a project
+
+The direct Citrus and prototype commands and project-scoped bare validation are available in the development snapshot.
+After installing the skills for your assistant, select the application or module you want to work on.
+Kit metadata can identify the runtime and versions. In a project without that metadata, the assistant
+inspects the build, configuration and routes and asks you about unresolved versions, endpoints or behavior.
+Version-sensitive checks need matching catalog evidence. Missing evidence appears in the result.
+
+* Run `/camel-validate` to check the selected project's routes. The report goes under `docs/` even during an
+  active migration. Use an explicit pipeline ID to update that pipeline's report. Execute supplies its
+  own ID when it hands off to the same validator.
+* Try `/camel-citrus test the orders route with an empty order`. Supply the expected behavior and permitted test
+  services. The assistant uses the same Citrus analysis, generation and runner guides as Execute's test engineer.
+  Authoring returns test paths. Ask to run the tests for observed results. Running uses a matching Camel test plugin or JBang with the project's pinned Citrus version.
+  Container tests also need Docker. Schema checks use matching Citrus MCP or a matching cached catalog.
+* Try `/camel-prototype copy an order file to an outbox`. The sample directory contains a Camel YAML route,
+  an input in `inbox/` and a README with one run command. With Camel CLI installed, ask the assistant to run it
+  and compare the output file. For a service that cannot run locally, supply a sandbox endpoint or choose a
+  local stub. Transactions and observability are opt-in.
+* Say “take this prototype into design” or use `/camel-prototype continue` in a later session. The assistant
+  reads the sample paths, service choices and observed results, then starts xref:camel-brainstorm.adoc[].
+  Creating or running a sample leaves your pipeline idle.
 
 [[workflow-hooks]]
 == Running a required workflow hook
@@ -137,7 +163,7 @@ user_invocable: false
 
 In the core source only `camel-start` sets `user_invocable: true`. The
 https://github.com/apache/camel-kit/blob/main/kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml[workflow manifest] records each skill's status and public command.
-The installed front matter depends on the assistant. For example, Bob 2 and Claude mark all nine public
+The installed front matter depends on the assistant. For example, Bob 2 and Claude mark all eleven public
 skills `user-invocable: true`. Claude, Copilot and Pi mark the four internal helpers
 `disable-model-invocation: true`. See <<entry-points>> for explicit invocation.
 

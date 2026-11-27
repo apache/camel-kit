@@ -2,6 +2,7 @@ package org.apache.camel.kit.workflow;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -19,7 +20,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
 /** Versioned declarations of one build-time module. Keys are stable across explicitly selected replacements. */
 record SkillPack(String id, int schema, List<String> requires, Map<String, Entry> add, Map<String, Entry> replace,
-        List<String> exclude) {
+        List<String> exclude, List<String> bundledSkills) {
 
     static final ObjectMapper YAML = new ObjectMapper(
             YAMLFactory.builder()
@@ -60,12 +61,15 @@ record SkillPack(String id, int schema, List<String> requires, Map<String, Entry
         requires = requires == null ? List.of() : List.copyOf(requires);
         add = add == null ? Map.of() : Map.copyOf(add);
         replace = replace == null ? Map.of() : Map.copyOf(replace);
+        bundledSkills = bundledSkills == null ? List.of() : List.copyOf(bundledSkills);
         exclude = exclude == null ? List.of() : List.copyOf(exclude);
     }
 
     static Map<String, SkillPack> load(ClassLoader loader, List<String> selected) throws IOException {
         Map<String, SkillPack> packs = new TreeMap<>();
-        for (String id : selected) {
+        var pending = new ArrayDeque<>(selected);
+        while (!pending.isEmpty()) {
+            String id = pending.removeFirst();
             if (!id.matches(ID) || packs.containsKey(id)) {
                 throw new IOException("Invalid or duplicate selected pack ID: " + id);
             }
@@ -77,6 +81,11 @@ record SkillPack(String id, int schema, List<String> requires, Map<String, Entry
                             "Expected pack '" + id + "' schema 1, found '" + pack.id() + "' schema " + pack.schema());
                 }
                 packs.put(id, pack);
+                if (id.equals("core")) {
+                    // Every distribution includes the packs re-exported by its core descriptor.
+                    pack.requires().stream().filter(dependency -> !selected.contains(dependency))
+                            .forEach(pending::addLast);
+                }
             } catch (IOException | RuntimeException e) {
                 throw new IOException(path + ": " + e.getMessage(), e);
             }
@@ -150,7 +159,14 @@ record SkillPack(String id, int schema, List<String> requires, Map<String, Entry
             if (original == null) {
                 throw edit.error("no such contribution to replace or exclude");
             }
-            if (!packs.get(edit.pack()).requires().contains(original.pack())) {
+            List<String> requires = packs.get(edit.pack()).requires();
+            // Core re-exports its formerly core-owned skill trees for existing overlay descriptors.
+            String owner = original.name().split("/", 2)[0];
+            boolean reexported = requires.contains("core") && packs.containsKey("core")
+                    && packs.get("core").requires().contains(original.pack())
+                    && (original.kind().equals("skill") || original.kind().equals("resource"))
+                    && packs.get(original.pack()).bundledSkills().contains(owner);
+            if (!requires.contains(original.pack()) && !reexported) {
                 throw edit.error("requires must name the declaring pack '" + original.pack() + "'");
             }
             if (original.entry().provider() != null && edit.entry() != null

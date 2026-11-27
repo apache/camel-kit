@@ -87,6 +87,8 @@ class CommandStubGenerator {
             case "camel-plan" -> "<design-spec-or-pipeline-id>";
             case "camel-execute" -> "<pipeline-id-or-plan>";
             case "camel-validate" -> "<pipeline-id-or-route-path>";
+            case "camel-citrus" -> "<route-or-test-task>";
+            case "camel-prototype" -> "<sample-request-or-continue>";
             case "camel-ship" -> "[ship-options]";
             case "camel-knowledge" -> "<camel-question>";
             case "camel-debug" -> "<error-or-route-path>";

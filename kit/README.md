@@ -33,6 +33,8 @@ Migration:    /camel-migrate    → /camel-plan → /camel-execute → /camel-va
 Utilities:    /camel-ship          (Technology Preview — delegate to the local Ship controller)
               /camel-knowledge     (documentation Q&A)
               /camel-debug         (standalone troubleshooting)
+              /camel-citrus        (Citrus tests for selected routes)
+              /camel-prototype     (runnable sample and optional design handoff)
 ```
 
 | Command | Purpose |
@@ -43,6 +45,8 @@ Utilities:    /camel-ship          (Technology Preview — delegate to the local
 | `/camel-plan` | Reviews approved design, creates a detailed implementation plan with wave analysis for parallel execution |
 | `/camel-execute` | Orchestrated execution — probes the environment, implements tasks in dependency waves, runs adversarial/spec/quality reviews, and performs applicable smoke and runtime verification |
 | `/camel-validate` | Final static quality gate or standalone project check — covers schema, endpoints, quality, security, anti-patterns, and constitution compliance without modifying routes |
+| `/camel-citrus` | Author or run Citrus tests for a selected application |
+| `/camel-prototype` | Try a runnable sample, then optionally carry it into Brainstorm |
 | `/camel-debug` | Standalone troubleshooting outside a pipeline for broken routes, build failures, startup errors, and runtime exceptions |
 | `/camel-ship` | **Technology Preview.** Thin harness entry point for the local Ship controller, which owns the end-to-end run and configurable oversight (`always`, `smart`, `never`) |
 | `/camel-knowledge` | Documentation Q&A — semantic search over Apache Camel docs, CVE advisories, release notes, and component catalog |

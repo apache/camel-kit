@@ -27,7 +27,7 @@ class Bob2GeneratorTest {
 
     private static final Set<String> PUBLIC_COMMANDS = Set.of(
             "camel-start", "camel-brainstorm", "camel-migrate", "camel-plan", "camel-execute",
-            "camel-validate", "camel-ship", "camel-knowledge", "camel-debug");
+            "camel-validate", "camel-ship", "camel-knowledge", "camel-debug", "camel-citrus", "camel-prototype");
 
     private static final Set<String> PERSONA_FILES = Set.of(
             "acr-moderator.md",

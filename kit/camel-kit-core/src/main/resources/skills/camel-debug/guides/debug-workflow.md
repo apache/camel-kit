@@ -44,7 +44,8 @@ no extra context-authority confirmation.
 
 ### Gather Context
 
-1. Parse `.camel-kit/config.properties`, validate the recognized names, formats,
+1. When Kit metadata is absent, resolve the same fields from the selected project using shared/direct-project.md.
+   When present, parse `.camel-kit/config.properties`, validate the recognized names, formats,
    allowed values, and applicable cross-field constraints, then extract only:
    - `project.runtime` (`main` | `spring-boot` | `quarkus`)
    - `project.camelVersion`
