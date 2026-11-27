@@ -34,7 +34,9 @@ A skill is a directory containing a manifest file (`SKILL.md`) and an optional `
 
 The contributor guide includes the [pack descriptor and runnable example](modules/ROOT/pages/contributing.adoc#skill-packs).
 
-**Core workflow manifest:** `kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml` is the source of truth for skill visibility and generated slash-command stubs. The `SKILL.md` frontmatter must match the manifest.
+The [core workflow manifest](../kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml) defines the classification criteria immediately above
+`skills`. Each public skill names its command. The compiled catalog and agent descriptor determine how
+`init` exposes that command.
 
 ### SKILL.md Format
 
@@ -57,45 +59,28 @@ user_invocable: false
 | `guides/optional-guide.md` | When condition X | Supplementary guide |
 ```
 
-**Note:** Only `camel-start` sets `user_invocable: true` in the shared source — it is the single auto-discovered entry point (meta-router). Pipeline and standalone skills (Tier 1/2) are invoked through generated command stubs on slash-command agents and through native project skill selection on Codex CLI and GitHub Copilot CLI. Internal skills are dispatched only by pipeline skills.
-
-The frontmatter fields:
-- `name` -- skill identifier, used in cross-references
-- `description` -- trigger keywords that help agents match user intent to the correct skill
-- `user_invocable` -- `true` for `camel-start` (meta-router) only in the shared source. Pipeline and standalone skills (Tier 1/2) still have generated entry points despite `user_invocable: false`: slash-command stubs for most agents and project skills for Codex CLI and GitHub Copilot CLI. Internal skills (`camel-verify`, `camel-design`, `camel-implement`, `camel-test`) are dispatched only by pipeline skills
-
-Agent-specific generators may add runtime aliases to copied skill files. For example, Copilot, Pi, and Qwen generated
-copies add `user-invocable` alongside Camel-Kit's source `user_invocable` metadata. Codex generated copies
-adapt exact `/camel-*` skill invocations to native `$camel-*` mentions while leaving file paths unchanged.
-
-Bob 2 generated copies set both invocation fields to `true` for skills referenced by
-`user_facing: true` commands in the workflow manifest. Bob Shell uses those native
-skills through `/skills` and `$camel-*`; Bob IDE exposes them through `/camel-*`.
-Verified Shell 2.0.2 and IDE 2.1.0 skip migrating a same-name command stub when
-`SKILL.md` already exists. Internal helpers retain `false` for both fields.
-The Shell `/` menu contains built-in commands and MCP prompts.
-Legacy command stubs remain installed for compatibility, and the native Ship skill
-retains the same CLI delegation contract. See [Bob setup](user-guide.md#bob-shell-202).
+The `name` identifies the skill and `description` tells the assistant when to use it. The core source
+frontmatter must match the manifest. Only the router sets `user_invocable: true`. For example,
+`camel-plan` sets it to `false` and still has a public entry point. See
+[how the eight targets expose skills](modules/ROOT/pages/skills.adoc#entry-points).
 
 ### All Skills
 
-| Skill | Source User-Invocable | Loaded By | Purpose |
+| Skill | Manifest status | Workflow caller or use | Purpose |
 |-------|---------------|-----------|---------|
-| `camel-start` | Yes | -- | Meta-router and primary entry point: detects intent, loads appropriate pipeline |
-| `camel-brainstorm` | No | `camel-start` (greenfield) | Orchestrate design phase: interview user, produce the pipeline design spec |
-| `camel-plan` | No | `camel-brainstorm` (after design approval) | Produce detailed implementation plan from approved design spec |
-| `camel-execute` | No | `camel-plan` (auto-invoked after planning) | Environment probe, adversarial pre-filter, then ordered spec and quality review per task |
-| `camel-migrate` | No | `camel-start` (migration) | Vendor-aware risk, retirement, and safe-seam analysis plus design; hands an approved design to `camel-plan`. In direct mode, implements route files under Iron Laws 1 and 2 with inline validation and user-authorized runtime check |
-| `camel-verify` | No | `camel-execute` (internal role: subagent where supported, inline otherwise) | 3-phase runtime verification loop (build, Citrus tests, report) — runs inside execute, not as a standalone pipeline stage |
-| `camel-ship` | No | -- (standalone CLI delegate) | **Technology Preview.** Forwards to the configured local Ship command; the controller owns stages, run state, and oversight |
-| `camel-design` | No | `camel-brainstorm` | Guides for component selection, EIP catalog, and flow design assembly |
-| `camel-implement` | No | `camel-execute` | Guides for YAML generation, properties, Docker Compose, DataMapper |
-| `camel-validate` | No | `camel-execute` or direct invocation | Tier 1 quality gate: schema validation, endpoint verification, security analysis |
-| `camel-test` | No | `camel-execute` | Guides for route analysis and test generation with Citrus + Testcontainers |
-| `camel-knowledge` | No | Direct invocation; pipeline skills as needed | Routes questions to knowledge MCP tools |
-| `camel-debug` | No | `camel-start` (ad-hoc troubleshooting) | Standalone debugging: STOP → PRESERVE → DIAGNOSE → FIX → GUARD workflow |
-
-**Note:** Only `camel-start` has `user_invocable: true` in its shared source metadata; the Bob 2 generated override described above exposes all nine public commands. Pipeline and standalone skills still have generated entry points despite `user_invocable: false`: slash-command stubs for most agents and project skills for Codex CLI and GitHub Copilot CLI. Internal skills (`camel-verify`, `camel-design`, `camel-implement`, `camel-test`) are dispatched only by pipeline skills.
+| `camel-start` | `router` | -- | Meta-router and primary entry point: detects intent, loads appropriate pipeline |
+| `camel-brainstorm` | `pipeline` | `camel-start` (greenfield) | Orchestrate design phase: interview user, produce the pipeline design spec |
+| `camel-plan` | `pipeline` | `camel-brainstorm` (after design approval) | Produce detailed implementation plan from approved design spec |
+| `camel-execute` | `pipeline` | `camel-plan` (auto-invoked after planning) | Environment probe, adversarial pre-filter, then ordered spec and quality review per task |
+| `camel-migrate` | `pipeline` | `camel-start` (migration) | Vendor-aware risk, retirement, and safe-seam analysis plus design; hands an approved design to `camel-plan`. In direct mode, implements route files under Iron Laws 1 and 2 with inline validation and user-authorized runtime check |
+| `camel-verify` | `internal` | `camel-execute` (internal role: subagent where supported, inline otherwise) | 3-phase runtime verification loop (build, Citrus tests, report) — runs inside execute, not as a standalone pipeline stage |
+| `camel-ship` | `standalone` | -- (standalone CLI delegate) | **Technology Preview.** Forwards to the configured local Ship command; the controller owns stages, run state, and oversight |
+| `camel-design` | `internal` | `camel-brainstorm` | Guides for component selection, EIP catalog, and flow design assembly |
+| `camel-implement` | `internal` | `camel-execute` | Guides for YAML generation, properties, Docker Compose, DataMapper |
+| `camel-validate` | `pipeline` | `camel-execute` or direct invocation | Tier 1 quality gate: schema validation, endpoint verification, security analysis |
+| `camel-test` | `internal` | `camel-execute` | Guides for route analysis and test generation with Citrus + Testcontainers |
+| `camel-knowledge` | `standalone` | Direct invocation; pipeline skills as needed | Routes questions to knowledge MCP tools |
+| `camel-debug` | `standalone` | `camel-start` (ad-hoc troubleshooting) | Standalone debugging: STOP → PRESERVE → DIAGNOSE → FIX → GUARD workflow |
 
 ### Shared Guides
 
@@ -999,11 +984,9 @@ user_invocable: false
 | `guides/main-guide.md` | Always | Primary instruction guide |
 ```
 
-**Note:** Only `camel-start` should have `user_invocable: true` in the shared source. All other source skills have `user_invocable: false`; the Bob 2 generator overrides both invocation fields for public command skills. Generated command stubs and Codex/Copilot project skills still work independently of this metadata; Qwen generation also emits its equivalent hyphenated `user-invocable` field.
-
 3. **Write guide files** in `guides/`. Each guide is a self-contained markdown instruction file loaded by the agent when the skill is active.
 
-4. **Update the workflow manifest first:** add or modify the entry in `kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml`. Set `generated_stub: true` only for commands that should be emitted into each agent's commands directory. Add or update the corresponding skill entry, stage/artifact metadata, transitions, and MCP tool allowlists if the workflow contract changes.
+4. **Register every core skill** in the [workflow manifest](../kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml) using the criteria above `skills`. Set `generated_command` to the public command name or to `null` for an internal helper. Update stages, artifacts, transitions and MCP tool allowlists when they change.
 
 5. **If registering generated command or skill entry points:** update agent-specific guidance only where the command needs custom behavior beyond the generated stub or project skill. The default generator creates command stubs from the manifest. Agent templates still need updates when they contain human-readable command tables, custom modes, policies, or sub-agent dispatch:
    - Claude Code: update `templates/claude/claude-md.md`

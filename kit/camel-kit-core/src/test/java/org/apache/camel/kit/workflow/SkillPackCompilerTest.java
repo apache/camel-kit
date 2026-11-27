@@ -61,15 +61,28 @@ class SkillPackCompilerTest {
             """;
 
     @Test
-    void defaultCatalogPreservesPublicCommandsInternalSkillsAndCoreResources() throws Exception {
+    void defaultCatalogPreservesSkillClassificationAndCoreResources() throws Exception {
         var catalog = SkillCatalog.bundled();
         WorkflowManifest workflow = catalog.manifest().workflow();
         assertEquals(WorkflowManifestLoader.load(WorkflowManifestLoader.DEFAULT_RESOURCE), workflow);
-        assertEquals(Set.of("camel-start", "camel-brainstorm", "camel-plan", "camel-migrate", "camel-execute",
-                "camel-validate", "camel-debug", "camel-ship", "camel-knowledge"),
-                workflow.generatedCommandStubs().stream().map(c -> c.name()).collect(Collectors.toSet()));
-        assertEquals(Set.of("camel-test", "camel-design", "camel-implement", "camel-verify"), workflow.skills().stream()
-                .filter(s -> "internal".equals(s.status())).map(s -> s.name()).collect(Collectors.toSet()));
+        var skillsByStatus = workflow.skills().stream().collect(Collectors.groupingBy(
+                WorkflowManifest.WorkflowSkill::status,
+                Collectors.mapping(WorkflowManifest.WorkflowSkill::name, Collectors.toSet())));
+        assertEquals(Map.of(
+                "router", Set.of("camel-start"),
+                "pipeline",
+                Set.of("camel-brainstorm", "camel-migrate", "camel-plan", "camel-execute", "camel-validate"),
+                "standalone", Set.of("camel-debug", "camel-ship", "camel-knowledge"),
+                "internal", Set.of("camel-design", "camel-implement", "camel-test", "camel-verify")), skillsByStatus);
+        var publicSkills = workflow.skills().stream().filter(skill -> !"internal".equals(skill.status()))
+                .map(WorkflowManifest.WorkflowSkill::name).collect(Collectors.toSet());
+        assertEquals(publicSkills, workflow.generatedCommandStubs().stream()
+                .map(WorkflowManifest.WorkflowCommand::name).collect(Collectors.toSet()));
+        assertEquals(publicSkills, workflow.commands().stream().filter(WorkflowManifest.WorkflowCommand::userFacing)
+                .map(WorkflowManifest.WorkflowCommand::skill).collect(Collectors.toSet()));
+        assertEquals(Set.of("camel-start"),
+                workflow.skills().stream().filter(WorkflowManifest.WorkflowSkill::userInvocable)
+                        .map(WorkflowManifest.WorkflowSkill::name).collect(Collectors.toSet()));
         assertEquals("camel-validate/SKILL.md",
                 catalog.manifest().contributions().get("step/validate/report/timestamp").path());
         assertTrue(content(catalog, "camel-validate/SKILL.md").contains("Use the current date and time"));

@@ -375,11 +375,14 @@ Each guide in `guides/` is a self-contained markdown file loaded by the agent wh
 
 ### 4. Register the Skill
 
-- **If user-facing:** update the workflow manifest and generated-command/skill tests; each target emits the surface its registry supports
-- **If internal:** update the parent skill's SKILL.md to reference your new guides
-- Update `docs/commands.md` if user-facing
+Register every core skill under `skills` in the [workflow manifest](kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml). The comments above
+that section explain how to choose its status. Match the source `user_invocable` value in `SKILL.md`.
 
-See [Architecture Guide](docs/architecture.md#10-how-to-add-a-skill) for the full process.
+- For a public skill, set `generated_command` to its `user_facing` command, document it in
+  [the command reference](docs/commands.md#slash-commands), and check its entry point on all eight targets.
+- For an internal skill, set `generated_command: null` and reference its instructions or guides from the caller.
+
+Skills contributed by a pack use the [pack descriptor](docs/modules/ROOT/pages/contributing.adoc#skill-packs).
 
 ### 5. Add Agent Traits (Optional)
 
