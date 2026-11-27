@@ -614,7 +614,7 @@ camel-kit doc unstale docs/camel-kit/001-order-processing/implementation-plan.md
 ## Slash Commands
 
 Start with `/camel-start` to route a request, or invoke any of the nine public skills directly.
-The examples below use slash commands. See the [entry points for each assistant](modules/ROOT/pages/skills.adoc#entry-points)
+The examples below use slash commands. See the [entry points for each assistant](modules/ROOT/pages/agents.adoc#entry-points)
 for Bob Shell and Codex `$camel-*` mentions, Pi `/skill:camel-*` commands and other native forms.
 
 The [core workflow manifest](../kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml) defines the classification. Command generation and
@@ -1114,9 +1114,13 @@ GitHub Copilot CLI now uses its native `.github/skills/` surface exclusively. Ol
 
 ### /camel-knowledge
 
-Ask a documentation, component, release or security advisory question, for example
-`/camel-knowledge Which options does the Kafka component support?` The skill uses the Knowledge MCP server
-to return findings with sources. Brainstorm and Execute can also use it during a pipeline.
+**Purpose:** Answer factual Apache Camel questions using the Knowledge MCP server.
+
+**When to use:** Look up a component, release, migration guide, issue or security advisory. Brainstorm and Execute also use this skill during a pipeline.
+
+**Produces:** An answer with sources for the findings.
+
+**Example:** `/camel-knowledge Which options does the Kafka component support?`
 
 ---
 
@@ -1234,6 +1238,9 @@ camel-kit init my-project --ai claude
 
 # Validate (standalone, any project)
 /camel-validate                          # Validate routes in current project
+
+# Documentation lookup
+/camel-knowledge What changed in my Camel release?
 
 # Debug (ad-hoc troubleshooting)
 /camel-debug                             # Diagnose and fix a broken route

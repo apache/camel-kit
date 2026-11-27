@@ -4,18 +4,30 @@
 Markdown skills; `init` adapts them with agent-specific traits and writes the agent's native configuration, so the
 workflow is the same everywhere and only the way you invoke it differs.
 
-[cols="1,1,2"]
+[[entry-points]]
+== Public skill entry points
+
+[cols="2,1,2,3"]
 |===
-| Agent | Init flag | Start the workflow
+| Agent | Init flag | Start the workflow | How the public skill is installed
 
 | Anthropic Claude Code | `--ai claude` | `/camel-start`
+| Native skill in `.claude/skills/` in the development snapshot. See <<claude-native-skills,Claude skill discovery and upgrades>>.
 | IBM Bob 2 (default) | `--ai bob2` | `$camel-start` in Bob Shell, `/camel-start` in Bob IDE
-| Google Antigravity | `--ai antigravity` | `/camel-start`, or ask for the `camel-start` skill by name
+| Native skill in `.bob/skills/`. Bob Shell lists it in `/skills`. Kit also writes legacy command stubs.
+| Google Antigravity | `--ai antigravity` | `/camel-start` or ask for `camel-start` by name
+| Native skill in `.agents/skills/`.
 | OpenAI Codex CLI | `--ai codex` | `$camel-start` after trusting the repository
-| GitHub Copilot CLI | `--ai copilot` | Ask Copilot to "Use the `/camel-start` skill"
+| Native skill in `.agents/skills/`. Open `/skills` to browse.
+| GitHub Copilot CLI | `--ai copilot` | Ask Copilot to use the `camel-start` skill
+| Native skill in `.github/skills/`.
 | Pi | `--ai pi` | `/skill:camel-start` after `/trust`
+| Native skill in `.pi/skills/`. Kit also writes prompt shortcuts for every public skill except Ship.
+Use `/skill:camel-ship` to preserve quoted arguments.
 | Qwen Code | `--ai qwen` | `/camel-start`
+| Command stub in `.qwen/commands/`. Qwen loads `/camel-ship` from its native skill so it can dispatch Ship work.
 | OpenCode | `--ai opencode` | `/camel-start`
+| Command stub in `.opencode/commands/` loads the matching skill.
 |===
 
 The generated assets and the MCP configuration file of each target are listed in
@@ -137,7 +149,8 @@ codex
 (planner, implementer, tester, validator, migrator, catalog researcher and security reviewer; the development
 snapshot adds a Ship worker) and the MCP servers in `.codex/config.toml` (two by default; three with `--with-citrus-mcp`). It does not create `.codex/commands/`: Codex discovers the skills
 directly, so you start with `$camel-start` after trusting the repository, and inspect skills with `/skills` and
-servers with `/mcp`.
+servers with `/mcp`. In installed skill Markdown, Kit rewrites explicit skill mentions such as
+`/camel-debug` to `$camel-debug`. File paths and Markdown link destinations keep their original spelling.
 
 Codex loads the repository `.codex/` configuration only for trusted projects. Review the repository before trusting
 it; until then the custom agents and the MCP servers are not active. The setup stays repository-scoped: Camel Kit

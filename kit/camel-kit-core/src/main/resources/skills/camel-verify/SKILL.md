@@ -17,7 +17,8 @@ Maven compilation and Citrus testing retry up to 15 times; Camel Main startup re
 ## Invocation
 
 - **Internal only** — run by `camel-execute` after all implementation tasks, in an isolated subagent where supported or inline otherwise
-- If selected directly for a failure outside Execute, direct the user to `/camel-debug`. Start the verification loop only when Execute dispatches it.
+- For the Execute Step 3.5 assignment to verify the completed implementation and return its report, run the loop with the supplied project configuration.
+- For a standalone troubleshooting request, direct the user to `/camel-debug` and leave the verification loop idle.
 
 ## Prerequisites
 

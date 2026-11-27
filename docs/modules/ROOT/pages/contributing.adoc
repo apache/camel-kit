@@ -84,8 +84,9 @@ A skill is a directory under `kit/camel-kit-core/src/main/resources/skills/` wit
 matter with `name`, `description` and `user_invocable`, then the steps and a guide table) and a `guides/` directory
 of instruction files loaded on demand. Register every core skill in the
 https://github.com/apache/camel-kit/blob/main/kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml[core workflow manifest].
-Use the criteria above `skills` to choose its status. For a public entry, name its `user_facing` command in
-`generated_command`, add it to the command reference and check xref:skills.adoc#entry-points[each assistant's entry point].
+Use the criteria above `skills` to choose its status. For a public skill, add a `commands` entry with `user_facing: true` and `generated_stub: true`.
+Set the skill's `generated_command` to that name, document it in the command reference and check
+xref:agents.adoc#entry-points[each assistant's entry point].
 For an internal helper, set `generated_command: null` and reference its instructions or guides from the calling skill.
 Pack contributions use the <<skill-packs,pack descriptor>>. Shared
 guides under `skills/shared/` feed several skills, so check every caller before editing one. Agent-specific

@@ -434,7 +434,7 @@ attack_classes_left_downstream:
   - supply-chain substitution of dynamically fetched MCP servers and JBang dependencies
   - dependency confusion through snapshot or mirror repositories
   - secret exfiltration through generated configuration, test data, logs or transcripts
-  - build-time code execution by running an untrusted project's Maven build during verification
+  - build-time code execution by running an untrusted project's Maven build during verification (including the internal camel-verify phase of camel-execute)
   - insecure generated code accepted without review
   - destructive shell commands issued by an autonomous agent
   - exposure of an unauthenticated local MCP transport (Knowledge SSE) beyond loopback

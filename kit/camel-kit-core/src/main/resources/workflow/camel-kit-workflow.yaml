@@ -100,7 +100,8 @@ commands:
 
 # Classify each core skill by the task a developer can start with it.
 #   router: selects the workflow for a request whose next stage is undecided.
-#   pipeline: performs a named stage, entered directly with its inputs or by handoff.
+#   pipeline: performs a stage of the manual pipeline (design, plan, execute, validate)
+#             that a developer can enter directly with its inputs or reach by handoff.
 #   standalone: delivers a result independently of the manual pipeline, even when a stage also uses it.
 #   internal: supplies guides or performs work whose inputs and result belong to a calling workflow.
 # A public skill names its user_facing command in generated_command. Internal skills use null.
