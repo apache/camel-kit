@@ -9,7 +9,7 @@ user_invocable: false
 Runtime verification feedback loop. Builds, tests, diagnoses, fixes, and retries in a structured 3-phase loop:
 
 1. **Build / Startup Smoke Verification** — compile Spring Boot or Quarkus projects; for Camel Main, run the startup smoke test instead
-2. **Test Verification** — run Citrus integration tests via `camel test run`, classify and fix test failures
+2. **Test Verification** — run Citrus integration tests via the shared version-matched test runner, classify and fix test failures
 3. **Report** — structured summary of all phases, fixes applied, and issues found
 
 Maven compilation and Citrus testing retry up to 15 times; Camel Main startup retries up to 6 times, and persistent error classes can promote earlier. Report generation does not retry. Error classification routes fixes to existing skills (`camel-validate`, `camel-implement`, `camel-test`, or self-repair), while persistent architectural failures trigger automatic re-planning via `camel-execute/guides/re-plan-loop.md`. Graceful degradation applies when required tools are unavailable.

@@ -16,10 +16,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -82,7 +84,7 @@ public final class SkillPackCompiler {
     }
 
     private byte[] assemble(Map<String, SkillPack> packs) throws Exception {
-        WorkflowManifest workflow = readCore();
+        WorkflowManifest workflow = readCore(packs);
         for (SkillPack pack : packs.values()) {
             readDeclarations(pack.id(), pack.add());
             readDeclarations(pack.id(), pack.replace());
@@ -220,7 +222,7 @@ public final class SkillPackCompiler {
         return effective;
     }
 
-    private WorkflowManifest readCore() throws Exception {
+    private WorkflowManifest readCore(Map<String, SkillPack> packs) throws Exception {
         URL source = SkillPack.uniqueResource(loader, WorkflowManifestLoader.DEFAULT_RESOURCE);
         WorkflowManifest workflow;
         try (var in = source.openStream()) {
@@ -229,17 +231,30 @@ public final class SkillPackCompiler {
         if (!"1.0".equals(workflow.version())) {
             throw new IOException("Unsupported core workflow contract " + workflow.version() + " in " + source);
         }
+        Map<String, String> owners = new TreeMap<>();
+        Set<String> classified
+                = workflow.skills().stream().map(WorkflowSkill::name).collect(Collectors.toSet());
+        for (SkillPack pack : packs.values()) {
+            for (String skill : pack.bundledSkills()) {
+                if (!classified.contains(skill) || !packs.get("core").requires().contains(pack.id())) {
+                    throw new IOException(pack.id() + ": invalid bundled skill " + skill);
+                }
+                if (owners.putIfAbsent(skill, pack.id()) != null) {
+                    throw new IOException(pack.id() + ": duplicate bundled skill " + skill);
+                }
+            }
+        }
         if (source.openConnection() instanceof JarURLConnection jar) {
             try (var fs = FileSystems.newFileSystem(Path.of(jar.getJarFileURL().toURI()))) {
-                readCoreFiles(fs.getPath("/skills"), workflow);
+                readCoreFiles(fs.getPath("/skills"), workflow, owners);
             }
         } else {
-            readCoreFiles(Path.of(source.toURI()).getParent().resolve("../skills").normalize(), workflow);
+            readCoreFiles(Path.of(source.toURI()).getParent().resolve("../skills").normalize(), workflow, owners);
         }
         return workflow;
     }
 
-    private void readCoreFiles(Path root, WorkflowManifest workflow) throws IOException {
+    private void readCoreFiles(Path root, WorkflowManifest workflow, Map<String, String> owners) throws IOException {
         Map<String, WorkflowSkill> expected = new TreeMap<>();
         workflow.skills().forEach(skill -> expected.put(skill.name(), skill));
         try (var paths = Files.walk(root)) {
@@ -255,7 +270,8 @@ public final class SkillPackCompiler {
                     }
                     requires = skill.requires();
                 }
-                var d = new Declaration("core", key, new Entry(1, "skills/" + path, null, requires, null, List.of()));
+                String pack = owners.getOrDefault(path.split("/", 2)[0], "core");
+                var d = new Declaration(pack, key, new Entry(1, "skills/" + path, null, requires, null, List.of()));
                 base.put(key, d);
                 resources.put(d, Files.readAllBytes(file));
             }

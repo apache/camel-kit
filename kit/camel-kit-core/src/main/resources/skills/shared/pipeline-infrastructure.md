@@ -72,7 +72,8 @@ Created by brainstorm when starting a new pipeline manually:
 
 ## Pipeline Resolution
 
-When a pipeline skill starts, resolve the active pipeline:
+A bare direct `/camel-validate` uses the project and skips this section, even with an active pipeline.
+For a pipeline-scoped invocation, resolve the active pipeline:
 
 1. If `<PIPELINE_ID>` is passed as argument -> validate it with the rules above, then use it
 2. Else parse and validate `.camel-kit/pipeline.json` -> use `activePipeline`
@@ -157,6 +158,9 @@ The skill is auto-invoked by the previous stage within the same conversation. Co
 - HARD-RULEs for automatic transitions remain enforced
 
 ### Standalone Mode
+
+For bare `/camel-validate`, use the project route inventory and write a fresh report under `docs/`. Only an
+explicit ID or a handoff from Execute selects a pipeline report. The remaining rules apply to scoped calls.
 
 The skill is invoked independently (new session, CI/CD, or manual re-entry). No conversation context exists — the skill reads input from pipeline artifacts on disk.
 

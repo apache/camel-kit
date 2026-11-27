@@ -78,9 +78,17 @@ frontmatter must match the manifest. Only the router sets `user_invocable: true`
 | `camel-design` | `internal` | `camel-brainstorm` and `camel-migrate` (phase 2) | Guides for component selection, EIP catalog, and flow design assembly |
 | `camel-implement` | `internal` | `camel-execute` | Guides for YAML generation, properties, Docker Compose, DataMapper |
 | `camel-validate` | `pipeline` | `camel-execute` or direct invocation | Tier 1 quality gate: schema validation, endpoint verification, security analysis |
-| `camel-test` | `internal` | `camel-execute` | Guides for route analysis and test generation with Citrus + Testcontainers |
+| `camel-test` | `internal` | `camel-execute` and `camel-citrus` | Guides for route analysis and test generation with Citrus + Testcontainers |
 | `camel-knowledge` | `standalone` | Direct invocation; pipeline skills as needed | Routes questions to knowledge MCP tools |
 | `camel-debug` | `standalone` | `camel-start` (ad-hoc troubleshooting) | Standalone debugging: STOP → PRESERVE → DIAGNOSE → FIX → GUARD workflow |
+| `camel-citrus` | `standalone` | Developer | Supplies the selected route and expected behavior to the same test task as Execute |
+| `camel-prototype` | `standalone` | Developer | Runnable route, sample input, local services and explicit Brainstorm handoff |
+
+The `developer-tasks` pack owns the reusable validation, debugging, knowledge, design, implementation, test
+and verification skills as well as the two direct utilities. Design and implementation supply stage guidance;
+verification consumes Execute's generated application and reports back. Their existing private entry points
+remain suitable for those callers. The core pack retains Start's routing, the interview and workflow sequencing
+in Brainstorm, Migrate, Plan and Execute, and Ship's controller delegate.
 
 ### Shared Guides
 
@@ -293,7 +301,7 @@ controller-produced Ship specs.
 5. Run the internal **verification phase** (`camel-verify`) within execute (build, Citrus tests, report), using a sub-agent where supported
 6. Print the completion summary
 
-After execute completes, the pipeline continues to **validation** (`camel-validate`) as Phase 4 — the final static quality gate. Validation reports findings without applying fixes. Pipeline-scoped runs write `docs/camel-kit/<PIPELINE_ID>/validation-report.md`; project-scoped standalone runs with no pipeline write `docs/validation-report-YYYY-MM-DD_HH-mm.md`.
+After execute completes, the pipeline continues to **validation** (`camel-validate`) as Phase 4 — the final static quality gate. Validation reports findings without applying fixes. Pipeline-scoped runs write `docs/camel-kit/<PIPELINE_ID>/validation-report.md`; bare direct calls, even during an active migration, write `docs/validation-report-YYYY-MM-DD_HH-mm.md`.
 
 For subagent-capable targets, reviews, verification, and catalog lookups run in isolated contexts and only structured reports flow back to the orchestrator. Pi uses inline execution and records missing isolation.
 

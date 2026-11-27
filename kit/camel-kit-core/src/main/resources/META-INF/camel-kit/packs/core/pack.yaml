@@ -1,5 +1,6 @@
 id: core
 schema: 1
+requires: [developer-tasks]
 add:
   step/validate/report/timestamp:
     contract: 1

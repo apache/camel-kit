@@ -1,0 +1,17 @@
+# Copy an order file
+
+The route in `copy.camel.yaml` copies `inbox/order.txt` to `outbox/order.txt`. It needs Camel CLI
+and uses local directories for both endpoints. No external service is required.
+
+From this sample directory run:
+
+```sh
+camel run copy.camel.yaml
+```
+
+Compare the output with the input and stop the route with Ctrl+C. For a repeat, start with a fresh outbox.
+
+## Run record
+
+Not run. After a requested run, record the observed output or failure, the command and the revisions or
+hashes of the files used. This record and the local service choices are inputs to the design interview.

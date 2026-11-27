@@ -37,28 +37,18 @@ Auto-invoked by `camel-execute` at the end of its task loop. Pipeline context is
 
 ### Standalone Mode
 
-Invoked directly by the user: `/camel-validate` or `/camel-validate <PIPELINE_ID>`.
+Use `/camel-validate` for the selected project, optionally naming an existing project-contained route or module.
+Use `/camel-validate <PIPELINE_ID>` for a particular pipeline.
 
 **Detection at start:**
 
-1. If auto-invoked by execute in this conversation → **chained mode** (pipeline)
-2. If invoked with `<PIPELINE_ID>` and pipeline artifacts exist → **standalone mode** (pipeline-scoped)
-3. If invoked without `<PIPELINE_ID>` and `.camel-kit/pipeline.json` exists → **standalone mode** (pipeline-scoped, use `activePipeline`)
-4. If invoked without `<PIPELINE_ID>` and no `.camel-kit/pipeline.json` → **standalone mode** (project-scoped, validates routes in current project)
-
-**Standalone behavior (pipeline-scoped):**
-
-- Read prior artifacts from `docs/camel-kit/<PIPELINE_ID>/` for cross-reference
-- Run `{COMMAND_PREFIX} doc check <file>` and validate lineage on every input artifact. If stale or mismatched, stop until
-  the user selects regeneration, abort, or those exact revisions
-- Execute the full validation workflow
-- Write `validation-report.md` to the pipeline directory
-- STOP (no further stage transitions)
-
-**Standalone behavior (project-scoped — no pipeline):**
-
-- Validate routes found in the current project
-- Write a timestamped report to `docs/validation-report-YYYY-MM-DD_HH-mm.md`
+1. For the handoff from Execute use the exact pipeline ID, selected target and execution report supplied by Execute.
+2. A direct call with an explicit pipeline ID validates that pipeline. Require an existing, contained pipeline
+   directory and validate the provenance of its inputs using shared/pipeline-infrastructure.md. An invalid ID, missing directory or stale input stops the scoped run.
+3. A bare direct call or a selected route/module is project-scoped even during a migration. Read shared/direct-project.md. Inspect the
+   selected build and routes, ask for ambiguous inputs, and run the same applicable quality checks below.
+   Skip pipeline resolution, migration target, pipeline baseline comparison and design/plan provenance in this
+   mode. Do not read or change activePipeline, a pipeline report, stage, or Ship state.
 
 **Announce at start:** "I'm using the camel-validate skill to analyze route quality."
 
@@ -68,15 +58,19 @@ Provides the domain knowledge guides needed to validate generated Apache Camel r
 
 ## Runtime Path Inventory (MANDATORY)
 
-Use the target profile and migration handoff in `shared/mcp-setup.md`, Rule 1. For a direct migration,
+For a pipeline validation, use the target profile and migration handoff in `shared/mcp-setup.md`, Rule 1. For a direct migration,
 identify the destination from its migration note and ask which application to validate if scope is ambiguous.
+
+For a project-scoped check inventory the selected module’s actual route and property files, including custom filenames.
+Use the selected application profile when available. If Kit metadata is absent, use corroborated project facts for
+static checks, and mark checks without a verifiable catalog or Maven binding INCOMPLETE.
 
 For a Maven destination, run the wrapper's `help:effective-pom` for the destination module and pass the output to
 the same target command with `--check-effective-pom <file>`. For in-place validation also supply the fresh
 `--dependency-tree <json>` from that leaf under the same Maven settings (see the version-selection guide). Keep the output workspace-relative and temporary
 during report-only validation. Record a missing model or version mismatch as INCOMPLETE.
 
-Before loading validation stages, read the selected profile's `runtime` and every flow's `Target Module`. Build an exact inventory for
+For a pipeline validation, before loading validation stages, read the selected profile's `runtime` and every flow's `Target Module`. Build an exact inventory for
 each module using the same optional relative module prefix as `camel-implement/guides/orchestrator.md`:
 
 - Main: `ROUTE_FILES` is every `{MODULE_PREFIX}*.camel.yaml`; `PROPS_FILE` is
@@ -96,7 +90,7 @@ Record resolved file paths, not bare flow names. Pass the exact `ROUTE_FILES` an
 
 ## Existing Project Baseline Validation
 
-**Check `.camel-kit/config.properties` for `project.type=existing`.**
+**For pipeline validation only**, check `.camel-kit/config.properties` for `project.type=existing`.
 
 If this is an existing project, establish and verify against a baseline BEFORE validating new capabilities:
 
@@ -358,15 +352,10 @@ If validation shows any of these, flag as REGRESSION:
 
 ## Pipeline Resolution
 
-Before running validation, resolve the active pipeline using `shared/pipeline-infrastructure.md`:
-1. Strictly parse/validate `.camel-kit/pipeline.json` -> get `activePipeline`
-2. Load prior artifacts from `docs/camel-kit/<activePipeline>/` for cross-reference:
-   - `design-spec.md` — for spec compliance checking
-   - `implementation-plan.md` — for task coverage verification
-   - `execution-report.md` — for verifying generated file list, review results, and verification status
-3. Save the validation report to `docs/camel-kit/<activePipeline>/validation-report.md`
-
-When invoked standalone without pipeline context (project-scoped), fall back to scanning routes in the current project and saving the report to `docs/validation-report-YYYY-MM-DD_HH-mm.md`.
+For a chained or explicitly scoped check, validate the supplied ID using shared/pipeline-infrastructure.md.
+Load the matching design, plan and execution report when applicable. Run `{COMMAND_PREFIX} doc check <file>`
+and verify lineage before consuming each input. Stop on stale or mismatched evidence until the developer chooses
+regeneration, abort, or those exact revisions. Return the resulting report to the caller. A direct call stops there.
 
 ## Guide Manifest
 
@@ -405,7 +394,7 @@ later finalization separately. Pending finalization never excuses real discrepan
 After completing all validation checks, generate a markdown report saved to:
 
 - **Chained mode and standalone pipeline-scoped:** `docs/camel-kit/<PIPELINE_ID>/validation-report.md`
-- **Standalone project-scoped (no pipeline):** `docs/validation-report-YYYY-MM-DD_HH-mm.md`
+- **Standalone project-scoped (bare direct call):** `docs/validation-report-YYYY-MM-DD_HH-mm.md`
 
 <!-- camel-kit:step report -->
 
@@ -475,16 +464,18 @@ generated:
 <HARD-RULE>
 ALWAYS generate the validation report.
 - In chained mode and standalone pipeline-scoped mode, save to `docs/camel-kit/<PIPELINE_ID>/validation-report.md`.
-- In standalone project-scoped mode (no pipeline), save to `docs/validation-report-YYYY-MM-DD_HH-mm.md`.
+- In standalone project-scoped mode (bare direct call), save to `docs/validation-report-YYYY-MM-DD_HH-mm.md`.
 This creates an audit trail of validation results over time.
 </HARD-RULE>
 
-**Add frontmatter metadata:**
+**Publish the completed report.** Write it to a fresh project-contained scratch file under
+`docs/validation-report-draft-<unique>.md`. From the selected project root, initialize its frontmatter with
+`{COMMAND_PREFIX} doc init --by camel-validate <draft>`. Add `--from execution-report.md` only for a scoped report with that actual input.
+Run the appropriate command below, passing paths and IDs as individual arguments. Use the printed result path, including any numeric suffix for a same-minute repeat.
+The command moves the draft to its destination. On failure retain it and report the diagnostic.
 
-- When `execution-report.md` exists: run `{COMMAND_PREFIX} doc init --by camel-validate --from execution-report.md <validation-report.md>`.
-- Otherwise: run `{COMMAND_PREFIX} doc init --by camel-validate <validation-report.md>`; do not add false `from` provenance merely because a pipeline ID exists.
-
-Both commands are idempotent; existing frontmatter is preserved.
+- Project check: `{COMMAND_PREFIX} doc publish-validation --project . --input <draft>`
+- Execute handoff or explicit ID: `{COMMAND_PREFIX} doc publish-validation --project . --input <draft> --pipeline <PIPELINE_ID>`
 
 ## Iron Laws
 

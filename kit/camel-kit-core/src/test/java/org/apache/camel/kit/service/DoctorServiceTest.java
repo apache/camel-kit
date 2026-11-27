@@ -160,7 +160,7 @@ class DoctorServiceTest {
     void bob2DoctorDetectsHiddenPublicSkillsUntilRegeneration() throws Exception {
         createHealthyWorkspace(tempDir, "bob2");
         List<String> hiddenSkills = List.of("camel-brainstorm", "camel-migrate", "camel-plan", "camel-execute",
-                "camel-validate", "camel-ship", "camel-knowledge", "camel-debug");
+                "camel-validate", "camel-ship", "camel-knowledge", "camel-debug", "camel-citrus", "camel-prototype");
         for (String name : hiddenSkills) {
             Path skill = tempDir.resolve(".bob/skills/" + name + "/SKILL.md");
             Files.writeString(skill, Files.readString(skill)

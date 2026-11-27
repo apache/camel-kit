@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Bare `/camel-validate` writes a project report even during a migration. Pass a pipeline ID to refresh its report.
+  `/camel-citrus` shares Execute's testing guides. `/camel-prototype` creates a runnable sample with an explicit
+  handoff to Brainstorm (#194).
+
 - Migration retains the source versions and uses a separate target profile for Maven generation and catalog
   verification. The new `target` command prints that profile, renders the application POM, and checks Maven and
   catalog evidence. Spring Boot templates import the application starter, Camel core and framework BOMs. Existing

@@ -17,10 +17,10 @@ explicitly when you want the static gate:
 /camel-validate
 ----
 
-With a pipeline ID, or with an active pipeline recorded in `.camel-kit/pipeline.json`, validation is pipeline-scoped:
+With an explicit pipeline ID or a handoff from Execute, validation is pipeline-scoped:
 it cross-references the design, the plan and the execution report under `docs/camel-kit/<pipeline-id>/`, checks
 their provenance with `camel-kit doc check`, and stops on a stale artifact until you choose to regenerate it, abort,
-or proceed with that exact revision. Without any pipeline it is project-scoped and validates the routes found in the
+or proceed with that exact revision. A bare direct invocation is always project-scoped and validates the routes found in the
 current project.
 
 [[checks]]
@@ -46,7 +46,8 @@ validation because it was added by hand.
 == Report
 
 Pipeline-scoped validation writes `docs/camel-kit/<pipeline-id>/validation-report.md`; project-scoped validation
-writes `docs/validation-report-YYYY-MM-DD_HH-mm.md`. The report records the project, runtime and Camel version, a
+writes `docs/validation-report-YYYY-MM-DD_HH-mm.md` using UTC. Repeated checks in the same minute receive a numeric suffix.
+The report records the project, runtime and Camel version, a
 summary table with pass, fail and warn counts per category, the findings, the constitution rule results, and the
 recommendations: priority fixes for the failures, suggested improvements for the warnings. A separate Documentation
 Consistency section compares current docs and active ADRs with code and actual checks, including pending decisions,

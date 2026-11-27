@@ -9,7 +9,7 @@ import org.aesh.command.CommandDefinition;
                    description = "Document staleness and source-bound review evidence",
                    groupCommands = {
                            DocCheckCommand.class, DocInitCommand.class, DocStaleCommand.class, DocUnstaleCommand.class,
-                           DocSnapshotCommand.class, DocRecordCommand.class,
+                           DocPublishValidationCommand.class, DocSnapshotCommand.class, DocRecordCommand.class,
                            HelpCommand.class
                    })
 public class DocCommand extends CliCommand {

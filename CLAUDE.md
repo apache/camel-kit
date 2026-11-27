@@ -39,7 +39,7 @@ Pipeline (user-invocable):
 `/camel-start` → `/camel-brainstorm` or `/camel-migrate` → `/camel-plan` →
 `/camel-execute` → `/camel-validate`
 
-Utilities: `/camel-ship`, `/camel-knowledge`, `/camel-debug`
+Utilities: `/camel-ship`, `/camel-knowledge`, `/camel-debug`, `/camel-citrus`, `/camel-prototype`
 
 Internal (not user-invocable): `camel-design`, `camel-implement`, `camel-verify`,
 `camel-test`

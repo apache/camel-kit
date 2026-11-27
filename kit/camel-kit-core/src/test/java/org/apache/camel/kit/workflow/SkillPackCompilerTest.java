@@ -72,7 +72,7 @@ class SkillPackCompilerTest {
                 "router", Set.of("camel-start"),
                 "pipeline",
                 Set.of("camel-brainstorm", "camel-migrate", "camel-plan", "camel-execute", "camel-validate"),
-                "standalone", Set.of("camel-debug", "camel-ship", "camel-knowledge"),
+                "standalone", Set.of("camel-debug", "camel-ship", "camel-knowledge", "camel-prototype", "camel-citrus"),
                 "internal", Set.of("camel-design", "camel-implement", "camel-test", "camel-verify")), skillsByStatus);
         var publicSkills = workflow.skills().stream().filter(skill -> !"internal".equals(skill.status()))
                 .map(WorkflowManifest.WorkflowSkill::name).collect(Collectors.toSet());
@@ -89,6 +89,33 @@ class SkillPackCompilerTest {
         assertFalse(content(catalog, "camel-start/SKILL.md").contains("<!-- camel-kit:step"));
         assertArrayEquals(Files.readAllBytes(Path.of("src/main/resources/skills/shared/iron-laws.md")),
                 catalog.open("shared/iron-laws.md").readAllBytes());
+    }
+
+    @Test
+    void directTasksAndTheirWorkflowCallersUseTheSameBundledImplementations() throws Exception {
+        var catalog = SkillCatalog.bundled();
+        var bindings = catalog.manifest().contributions();
+        var tasks = Set.of("camel-citrus", "camel-prototype", "camel-debug", "camel-knowledge", "camel-validate",
+                "camel-test", "camel-implement", "camel-design", "camel-verify");
+        for (var skill : catalog.manifest().workflow().skills()) {
+            String owner = tasks.contains(skill.name()) ? "developer-tasks" : "core";
+            assertEquals(owner, bindings.get("skill/" + skill.name()).pack(), skill.name());
+            for (String file : catalog.paths()) {
+                if (file.startsWith(skill.name() + "/guides/")) {
+                    assertEquals(owner, bindings.get("resource/" + file).pack(), file);
+                }
+            }
+        }
+        assertEquals(List.of("core", "developer-tasks"), catalog.manifest().packs());
+        assertArrayEquals(SkillPackCompiler.compile(getClass().getClassLoader(), List.of()),
+                SkillPackCompiler.compile(getClass().getClassLoader(), List.of("developer-tasks")));
+        assertTrue(bindings.get("skill/camel-citrus").requires().contains("skill/camel-test"));
+        assertTrue(bindings.get("skill/camel-execute").requires().containsAll(
+                List.of("skill/camel-test", "skill/camel-verify", "skill/camel-validate")));
+        String router = content(catalog, "camel-start/SKILL.md");
+        assertFalse(router.contains("camel-prototype"));
+        assertFalse(router.contains("camel-citrus"));
+        assertTrue(bindings.get("skill/camel-prototype").requires().contains("skill/camel-brainstorm"));
     }
 
     @Test
@@ -130,7 +157,10 @@ class SkillPackCompilerTest {
         Path pack = pack("small", "requires: [core]\nexclude: [" + guide + "]");
         try (var loader = loader(pack)) {
             var error = assertThrows(IOException.class, () -> SkillPackCompiler.compile(loader, List.of("small")));
-            assertTrue(error.getMessage().contains("core: "), error::getMessage);
+            assertTrue(
+                    error.getMessage()
+                            .contains("developer-tasks: resource/camel-design/guides/resilience-interview.md"),
+                    error::getMessage);
             assertTrue(error.getMessage().contains("requires missing contribution " + guide), error::getMessage);
             assertTrue(error.getMessage().contains("small: " + guide), error::getMessage);
         }
@@ -307,7 +337,7 @@ class SkillPackCompilerTest {
                 core.version(), core.description(), core.commands(), core.skills(),
                 core.stages(), artifacts, core.mcpServers(), core.websiteReference());
         WorkflowManifestValidator.validateOrThrow(workflow);
-        var overlay = new SkillPack("team", 1, List.of("core"), Map.of(), Map.of(), List.of(key));
+        var overlay = new SkillPack("team", 1, List.of("core"), Map.of(), Map.of(), List.of(key), List.of());
         var original
                 = new SkillPack.Declaration(
                         "core", key, new SkillPack.Entry(1, "entry.md", null, List.of(), null, List.of()));

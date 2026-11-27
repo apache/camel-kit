@@ -165,9 +165,9 @@ camel kit init --here --ai codex
 
 Use `--ai bob2` for both Bob Shell and Bob IDE. These entry points are verified with
 Bob Shell 2.0.2 and Bob IDE 2.1.0. In Bob Shell, start from the
-initialized project root, open `/skills` or type `$camel-`, and select one of the nine
+initialized project root, open `/skills` or type `$camel-`, and select one of the eleven
 public skills: `camel-start`, `camel-brainstorm`, `camel-migrate`, `camel-plan`,
-`camel-execute`, `camel-validate`, `camel-ship`, `camel-knowledge`, and `camel-debug`.
+`camel-execute`, `camel-validate`, `camel-ship`, `camel-knowledge`, `camel-debug`, `camel-citrus`, and `camel-prototype`.
 Enter the request after the skill name, for example:
 
 ```text
@@ -183,7 +183,7 @@ commands and MCP prompts; `/camel-*` workflow names in this guide correspond to
 `camel kit ship` command once, without adding defaults.
 
 Generated `.bob/skills/*/SKILL.md` files set both `user_invocable: true`
-and `user-invocable: true` for the nine public skills. The four internal helpers
+and `user-invocable: true` for the eleven public skills. The four internal helpers
 remain hidden. The verified Shell and IDE versions skip migrating `.bob/commands/`
 stubs when same-name native skills already exist, so those stubs cannot repair hidden
 skill metadata or create duplicate entries.
@@ -207,7 +207,7 @@ Preview the update with `--dry-run`. Edited skills stay in place. Compare their 
 To accept the entire selected Bob skills catalog, use `--replace .bob/skills`.
 Restart Bob after regeneration. Earlier `0.4.0-SNAPSHOT` builds can still contain
 the defect. Until you upgrade, set both invocation fields to `true` only in the
-nine public skills listed above, then restart Bob; leave internal helpers unchanged.
+public skills present in that installed version, then restart Bob; leave internal helpers unchanged.
 Regeneration with an older build overwrites that workaround. MCP prompts such as
 `/camel:camel_migrate_pr` are separate from Camel-Kit's migration workflow.
 
@@ -357,7 +357,7 @@ camel-kit nextId order-processing
 
 When using the Camel JBang plugin, run `camel kit nextId order-processing` instead.
 
-The pipeline state is tracked in `.camel-kit/pipeline.json`, which records the active pipeline ID. Each skill reads this file to know where to find and save artifacts.
+The pipeline state is tracked in `.camel-kit/pipeline.json`, which records the active pipeline ID. Pipeline stages use this ID when resolving scoped artifacts. A bare direct validation always selects the project.
 
 **Session resilience:** Because all artifacts are saved to disk, you can close your session and resume later. The pipeline picks up where you left off based on which artifacts already exist.
 
@@ -468,7 +468,7 @@ change message transformations or DataMapper engine selection.
 
 ### Phase 4: Validate (`/camel-validate`)
 
-Validation is the final, static quality gate. It checks route schemas, endpoint URIs, project-relative quality thresholds, security, anti-patterns, and all constitution rules. It reports findings without modifying the routes. Pipeline-scoped runs write `docs/camel-kit/<PIPELINE_ID>/validation-report.md`; a standalone project-scoped run with no pipeline writes `docs/validation-report-YYYY-MM-DD_HH-mm.md`.
+Validation is the final, static quality gate. It checks route schemas, endpoint URIs, project-relative quality thresholds, security, anti-patterns, and all constitution rules. It reports findings without modifying the routes. Pipeline-scoped runs write `docs/camel-kit/<PIPELINE_ID>/validation-report.md`; a bare direct invocation, even during a migration, writes `docs/validation-report-YYYY-MM-DD_HH-mm.md`.
 
 ### Example Walkthrough
 

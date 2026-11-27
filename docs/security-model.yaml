@@ -143,6 +143,10 @@ entry_points:
     input: YAML frontmatter of model-authored pipeline artifacts
     attacker_controllable: true
     caller_must_enforce: Legacy frontmatter flags are parsed as data; no semantic correctness guarantee.
+  - entry: camel-kit doc publish-validation
+    input: Project-local completed validation draft and optional manual pipeline ID.
+    attacker_controllable: true
+    caller_must_enforce: Confine the nonempty regular draft and destination to the project. Reserve a fresh project report unless the caller supplies a valid existing pipeline ID. Treat report contents as data.
   - entry: camel-kit doc snapshot/record and doc check --project
     input: source inventory, JSON snapshot/receipt, document and review report
     attacker_controllable: true

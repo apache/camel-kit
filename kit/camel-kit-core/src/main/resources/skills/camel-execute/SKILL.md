@@ -692,7 +692,7 @@ Save the completion summary as `docs/camel-kit/<PIPELINE_ID>/execution-report.md
 
 **Post-completion transition (invocation mode dependent):**
 
-- **Chained mode:** auto-invoke `camel-validate` (the pipeline continues to Phase 4). After its report returns, the
+- **Chained mode:** auto-invoke `camel-validate` with this exact pipeline ID, selected target and execution report (the pipeline continues to Phase 4). After its report returns, the
   execute parent finishes documentation reconciliation and records its honest result using
   `shared/documentation-reconciliation.md`. Capture a source snapshot before the final comparison; use the validation
   report as evidence, not permission to change code or accepted decisions. Report documentation separately from

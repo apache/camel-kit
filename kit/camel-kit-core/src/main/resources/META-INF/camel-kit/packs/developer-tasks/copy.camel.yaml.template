@@ -1,0 +1,9 @@
+- route:
+    id: copy-order
+    from:
+      uri: file:inbox
+      parameters:
+        noop: true
+      steps:
+        - to:
+            uri: file:outbox

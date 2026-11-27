@@ -9,6 +9,11 @@ Do not use it for quick property changes, version bumps or a single well-known c
 for Camel questions (`/camel-knowledge`), or when a design already exists (`/camel-plan`). Every other new
 integration goes through it, however small: short designs are fine, skipped designs are not.
 
+A prototype enters this interview when you explicitly request the handoff in conversation or run
+`/camel-prototype continue`. Select the saved sample if several exist. Brainstorm carries its files,
+service choices and observed results into the interview, checks open questions, and asks for design approval.
+See xref:skills.adoc#developer-tasks[creating and running a prototype].
+
 [[existing-project]]
 == Existing Camel 4 applications
 

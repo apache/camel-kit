@@ -69,6 +69,39 @@ class DocCommandsTest {
     }
 
     @Test
+    void bareValidationPreservesTheActiveMigrationAndScopedValidationPublishesToTheSelectedPipeline() throws Exception {
+        String id = "001-orders";
+        Path pipeline = Files.createDirectories(tempDir.resolve("docs/camel-kit").resolve(id));
+        Path state = Files.createDirectories(tempDir.resolve(".camel-kit")).resolve("pipeline.json");
+        String original = "{\"activePipeline\":\"001-orders\",\"mode\":\"manual\"}";
+        Files.writeString(state, original);
+        Path report = Files.writeString(pipeline.resolve("validation-report.md"), "previous migration report");
+        Path draft = tempDir.resolve("docs/validation-report-draft-check.md");
+        var cli = new CommandRunner(new DocPublishValidationCommand());
+        for (int i = 0; i < 2; i++) {
+            Files.writeString(draft, "one-off check " + i);
+            var output = new StringWriter();
+            cli.setOut(new PrintWriter(output));
+            assertEquals(0, cli.execute("--project", tempDir.toString(), "--input", draft.toString()));
+            Path published = tempDir.resolve(output.toString().strip());
+            assertEquals(tempDir.resolve("docs"), published.getParent());
+            assertEquals("one-off check " + i, Files.readString(published));
+            assertFalse(Files.exists(draft));
+        }
+        try (var paths = Files.list(tempDir.resolve("docs"))) {
+            assertEquals(2, paths.filter(Files::isRegularFile).count());
+        }
+        assertEquals("previous migration report", Files.readString(report));
+        assertEquals(original, Files.readString(state));
+        Files.writeString(draft, "Execute result");
+        assertEquals(1,
+                cli.execute("--project", tempDir.toString(), "--input", draft.toString(), "--pipeline", "unknown"));
+        assertEquals(0, cli.execute("--project", tempDir.toString(), "--input", draft.toString(), "--pipeline", id));
+        assertEquals("Execute result", Files.readString(report));
+        assertEquals(original, Files.readString(state));
+    }
+
+    @Test
     void checkWithFrontmatter() throws Exception {
         String content = FrontmatterHandler.writeFrontmatter(
                 StalenessInfo.stale("spec changed", "2026-05-13T10:00:00Z"),

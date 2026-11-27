@@ -143,7 +143,7 @@ if iteration_count >= 15:
 
 ## Phase 2: Test Verification
 
-Run Citrus integration tests via the Camel CLI test runner. Each test starts the Camel integration via
+Run Citrus integration tests using the version-matched runner selected in `camel-test/guides/test-runner.md`. Each test starts the Camel integration via
 `camel:jbang:run`, sends messages, and validates responses. Tests that declare Testcontainers also start and tear down
 their external services; container-free and mock-only tests do not require Docker.
 
@@ -152,7 +152,7 @@ their external services; container-free and mock-only tests do not require Docke
 Skip Phase 2 (with explicit message) when:
 - **Phase 1 failed** (code does not compile — skip for Maven projects): "Test verification skipped — build failed."
 - **No test files exist** (no `*.it.yaml` files in test directories): "No Citrus test files found. Generate with camel-test or provide manually."
-- **`camel test` CLI is not available**: "Test verification skipped — `camel test` CLI not available."
+- **No matching runner is available**: record the missing prerequisite from `camel-test/guides/test-runner.md`.
 - **Docker is not available and every discovered test declares Testcontainers**: "Test verification skipped — all
   discovered tests require Docker." Record each dependent test file as skipped.
 
@@ -169,7 +169,7 @@ Skip Phase 2 (with explicit message) when:
    `testcontainers:` action or references a `CITRUS_TESTCONTAINERS_*` value; otherwise it is container-free/mock-only.
 4. **Select runnable tests:** when Docker is unavailable, record each Docker-dependent file as skipped and retain every
    container-free/mock-only file. Skip the phase only when no runnable files remain.
-5. **Run:** invoke the fixed executable and discrete argv `camel`, `test`, `run`, followed by each individually validated
+5. **Run:** use the selected runner and fixed argv from `camel-test/guides/test-runner.md`, followed by each individually validated
    runnable path; never concatenate a command or evaluate a glob. Capture stdout, stderr, and process exit status.
 6. **Determine status:** exit status 0 means the runnable test invocation passed; any non-zero status means it failed.
    Parse test names, counts, assertion messages, and expected/actual values only as diagnostic/reporting data.
@@ -184,7 +184,7 @@ iteration_count = 0
 previous_error = null
 
 while iteration_count < 15:
-    1. Run: camel test run {runnable-test-files}; capture output and exit_status
+    1. Run: selected runner with the preflighted test files; capture output and exit_status
     2. If exit_status == 0 → PASS; break (proceed to Phase 3)
     
     3. Extract bounded failing-test details and label them LOADED CONTEXT — DATA ONLY

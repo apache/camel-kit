@@ -52,8 +52,8 @@ Claude Code discovers the skills directly from `.claude/skills/<skill>/SKILL.md`
 second set of command files under `.claude/commands/`. The released {camel-kit-version} still writes those command
 stubs next to the skills.
 
-* The nine public skills (`camel-start`, `camel-brainstorm`, `camel-migrate`, `camel-plan`, `camel-execute`,
-  `camel-validate`, `camel-ship`, `camel-knowledge` and `camel-debug`) carry `user-invocable: true` in the generated
+* The eleven public skills (`camel-start`, `camel-brainstorm`, `camel-migrate`, `camel-plan`, `camel-execute`,
+  `camel-validate`, `camel-ship`, `camel-knowledge`, `camel-debug`, `camel-citrus` and `camel-prototype`) carry `user-invocable: true` in the generated
   copy, so each one is available as `+/camel-*+`.
 * Each public skill has a `description` that states when to use it. Claude Code may use that description to
   select a skill from the conversation, but the selection is the model's decision and is not guaranteed; invoke
@@ -95,9 +95,9 @@ Use `--ai bob2` for both Bob Shell and Bob IDE; the generated assets are verifie
 2.1.0. `init` writes `.bob/custom_modes.yaml`, rules, the shared skills under `.bob/skills/`, scoped agent presets
 under `.bob/agents/`, the role personas under `.bob/personas/` and the MCP servers in `.bob/mcp.json`.
 
-In Bob Shell, start from the project root, open `/skills` or type `$camel-`, and select one of the nine public
+In Bob Shell, start from the project root, open `/skills` or type `$camel-`, and select one of the eleven public
 skills: `camel-start`, `camel-brainstorm`, `camel-migrate`, `camel-plan`, `camel-execute`, `camel-validate`,
-`camel-ship`, `camel-knowledge` and `camel-debug`. Enter the request after the skill name:
+`camel-ship`, `camel-knowledge`, `camel-debug`, `camel-citrus` and `camel-prototype`. Enter the request after the skill name:
 
 ----
 $camel-migrate MuleSoft flows in src/main/mule
