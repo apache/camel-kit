@@ -5,8 +5,6 @@ Markdown skills; `init` adapts them with agent-specific traits and writes the ag
 workflow is the same everywhere and only the way you invoke it differs.
 
 [[entry-points]]
-== Public skill entry points
-
 [cols="2,1,2,3"]
 |===
 | Agent | Init flag | Start the workflow | How the public skill is installed
@@ -19,7 +17,7 @@ workflow is the same everywhere and only the way you invoke it differs.
 | Native skill in `.agents/skills/`.
 | OpenAI Codex CLI | `--ai codex` | `$camel-start` after trusting the repository
 | Native skill in `.agents/skills/`. Open `/skills` to browse.
-| GitHub Copilot CLI | `--ai copilot` | Ask Copilot to use the `camel-start` skill
+| GitHub Copilot CLI | `--ai copilot` | Ask Copilot to "Use the `/camel-start` skill"
 | Native skill in `.github/skills/`.
 | Pi | `--ai pi` | `/skill:camel-start` after `/trust`
 | Native skill in `.pi/skills/`. Kit also writes prompt shortcuts for every public skill except Ship.
