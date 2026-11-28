@@ -103,7 +103,7 @@ public record ShipRun(
         return value != null && RUN_ID.matcher(value).matches();
     }
 
-    static boolean isPipelineId(String value) {
+    public static boolean isPipelineId(String value) {
         return value != null && PIPELINE_ID.matcher(value).matches();
     }
 

@@ -46,17 +46,17 @@ Users may arrive partway through a pipeline:
 
 **Pipeline 1 — Greenfield / New Feature:**
 ```text
-/camel-brainstorm → /camel-plan → /camel-execute → /camel-validate
+/camel-brainstorm → /camel-plan → /camel-execute → /camel-validate <PIPELINE_ID>
 ```
 
 **Pipeline 2 — Migration:**
 ```text
-/camel-migrate → /camel-plan → /camel-execute → /camel-validate
+/camel-migrate → /camel-plan → /camel-execute → /camel-validate <PIPELINE_ID>
 ```
 
 **Pipeline 3 — Existing Project Enhancement:**
 ```text
-/camel-brainstorm (auto-detects project.type=existing) → /camel-plan → /camel-execute → /camel-validate
+/camel-brainstorm (auto-detects project.type=existing) → /camel-plan → /camel-execute → /camel-validate <PIPELINE_ID>
 ```
 
 All pipelines share plan → execute → validate. Only the entry point differs. The existing project path uses brainstorm with automatic detection (`project.type=existing` in `.camel-kit/config.properties`) to understand the current codebase before designing new capabilities.

@@ -104,7 +104,7 @@ Camel-Kit applies this principle through its verification loop (now internal to 
 flowchart LR
     B["Build / Camel Main\nstartup smoke test"] -->|"error"| C["Classify error"]
     C -->|"fix applied"| B
-    B -->|"success"| T["camel test run\nstarts app/services and tests behavior"]
+    B -->|"success"| T["Citrus runner\nstarts app/services and tests behavior"]
     T -->|"error"| C2["Classify error"]
     C2 -->|"fix applied"| T
     T --> R["Report"]
@@ -615,7 +615,7 @@ The migration produces business requirements, the behavioral analysis, a design 
 `/camel-brainstorm`, and the operational runbook. This means the implementation pipeline is identical:
 
 ```
-/camel-migrate  -->  /camel-plan  -->  /camel-execute  -->  /camel-validate
+/camel-migrate  -->  /camel-plan  -->  /camel-execute  -->  /camel-validate <PIPELINE_ID>
 ```
 
 The migration output is fully compatible with the greenfield pipeline. From the plan phase onward, there is no
@@ -632,7 +632,7 @@ action still requires the named operator's separate execution-time authorization
 
 ### `camel-verify` (Internal to `/camel-execute`)
 
-Verification is a structured 3-phase feedback loop that builds the project, runs Citrus integration tests via `camel test run`, diagnoses errors, applies fixes, and retries until all tests pass or the iteration limit is reached. Citrus tests are self-contained: Testcontainers manage external services and `camel:jbang:run` starts the Camel integration within the test.
+Verification is a structured 3-phase feedback loop that builds the project, runs Citrus integration tests with the version-matched Camel test plugin or the pinned Citrus JBang runner, diagnoses errors, applies fixes, and retries until all tests pass or the iteration limit is reached. Citrus tests are self-contained: Testcontainers manage external services and `camel:jbang:run` starts the Camel integration within the test.
 
 **When it runs:**
 - **Automatically once** inside `/camel-execute`, after all implementation tasks and their reviews complete
@@ -643,7 +643,7 @@ Verification is a structured 3-phase feedback loop that builds the project, runs
 | Phase | What It Does |
 |-------|-------------|
 | **1. Build Verification** | Compiles Spring Boot or Quarkus projects with Maven and classifies build errors. Camel Main runs its startup smoke test instead. |
-| **2. Test Verification** | Runs Citrus integration tests via `camel test run`. Citrus tests are self-contained: Testcontainers start external services, `camel:jbang:run` starts the Camel integration, send/receive actions validate behavior. |
+| **2. Test Verification** | Runs Citrus integration tests with the version-matched Camel test plugin or the pinned Citrus JBang runner. Citrus tests are self-contained: Testcontainers start external services, `camel:jbang:run` starts the Camel integration, send/receive actions validate behavior. |
 | **3. Report** | Structured summary of all phases, fixes applied, and issues found. |
 
 ### Error Classification
@@ -659,7 +659,7 @@ Each phase uses a structured error taxonomy organized by build/smoke and test fa
 
 ### Graceful Degradation
 
-Verification adapts to available tools. If Maven is missing, build verification is skipped. If Docker is unavailable, test verification is skipped (Testcontainers requires Docker). If the `camel test` CLI is unavailable, test verification is skipped. Every skipped phase is reported explicitly -- nothing fails silently.
+Verification adapts to available tools. If Maven is missing, build verification is skipped. Docker availability gates only container-backed tests. If the plugin is missing or its Citrus binding is unknown or different, verification uses the pinned Citrus JBang runner. Every skipped phase is reported explicitly -- nothing fails silently.
 
 ---
 

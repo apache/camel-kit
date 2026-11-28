@@ -32,7 +32,12 @@ Use the same procedure for direct requests and Execute test tasks. For each test
 path, expected behavior and allowed effects above. Select the resolved Citrus and Camel release versions from the
 target build or Kit profile. Require exact numeric release versions before using them in the argv below.
 
-Use `camel test run` when the installed plugin's resolved Citrus dependency matches the selected project version.
+Prefer the pinned JBang runner below when the Camel test plugin is absent or its binding is unknown.
+To use the plugin, run `camel plugin get` and identify the installed test plugin. If its coordinate omits the
+version, inspect the class source for `camel-jbang-plugin-test` with `JAVA_TOOL_OPTIONS=-Xlog:class+load=info:stderr`
+on the child `camel test run --help` process. Read the Maven POM for that exact loaded JAR and resolve its
+`org.citrusframework:citrus-jbang` dependency, including inherited properties. Neither the Camel release nor
+a different cached POM establishes the Citrus version. Use `camel test run` only on an exact project match.
 Set the child process environment `CITRUS_JBANG_TEST_SOURCE_FILE_EXT=.it.yaml` for Kit test names. Supply each
 validated test path as a separate argument. If the plugin's binding is unknown or different, invoke the matching
 published Citrus runner with JBang from the project root:

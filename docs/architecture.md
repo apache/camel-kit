@@ -686,7 +686,7 @@ The verification pipeline (`camel-verify`) is a 3-phase feedback loop that build
 ### Phases
 
 1. **Build Verification** -- compile Spring Boot or Quarkus projects with Maven and classify build errors; Camel Main runs its startup smoke test instead
-2. **Test Verification** -- run Citrus YAML integration tests via `camel test run`, classify and fix test failures. Citrus tests are self-contained: Testcontainers start external services, `camel:jbang:run` starts the Camel integration, send/receive actions validate behavior.
+2. **Test Verification** -- run Citrus YAML integration tests with the version-matched Camel test plugin or the pinned Citrus JBang runner, classify and fix test failures. Citrus tests are self-contained: Testcontainers start external services, `camel:jbang:run` starts the Camel integration, send/receive actions validate behavior.
 3. **Report** -- structured summary of all phases, fixes applied, and issues found
 
 Each phase has an independent iteration budget of **max 15 attempts**. On each iteration, errors are classified and routed to the appropriate fix strategy.

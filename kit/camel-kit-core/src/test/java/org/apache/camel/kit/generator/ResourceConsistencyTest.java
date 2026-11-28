@@ -1269,7 +1269,7 @@ class ResourceConsistencyTest {
         assertTrue(testTasks.contains("`[MODULE_DIR]pom.xml` (Spring Boot/Quarkus only"));
         assertTrue(testTasks.contains("do not create a `pom.xml`"));
         assertTrue(testTasks.contains(
-                "camel test run [MODULE_DIR]src/test/resources/[flow-name].camel.it.yaml` exits 0"));
+                "the runner selected by `camel-test/guides/test-runner.md` runs `[MODULE_DIR]src/test/resources/[flow-name].camel.it.yaml` and exits 0"));
     }
 
     @Test
@@ -1800,10 +1800,11 @@ class ResourceConsistencyTest {
                 "test-generation must iterate over actual generated endpoints");
         assertFalse(testGeneration.contains("<pinned-compatible-version>"),
                 "test-generation must not emit unresolved dependency version placeholders");
-        assertTrue(testGeneration.contains("org.testcontainers:postgresql:RELEASE"),
-                "test-generation must provide a resolvable PostgreSQL Testcontainers dependency");
-        assertTrue(testGeneration.contains("org.testcontainers:mongodb:RELEASE"),
-                "test-generation must provide a resolvable MongoDB Testcontainers dependency");
+        assertFalse(testGeneration.contains(":RELEASE"));
+        assertTrue(testGeneration.contains("org.citrusframework:citrus-jbang-connector:{CITRUS_VERSION}"));
+        assertTrue(testGeneration.contains("org.testcontainers:postgresql:{RESOLVED_TESTCONTAINERS_VERSION}"));
+        assertTrue(testGeneration.contains("org.testcontainers:mongodb:{RESOLVED_TESTCONTAINERS_VERSION}"));
+        assertTrue(testGeneration.contains("Write exact versions"));
         assertTrue(testGeneration.contains("`{TEST_DIR}jbang.properties`"),
                 "JBang test dependencies must be written beside the generated test resources");
         assertFalse(testGeneration.contains("`test/jbang.properties`"),

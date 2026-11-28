@@ -27,8 +27,8 @@ For implementation work, the router answers these questions in order; the first 
 |===
 
 ----
-Greenfield: /camel-brainstorm -> /camel-plan -> /camel-execute -> /camel-validate
-Migration:  /camel-migrate    -> /camel-plan -> /camel-execute -> /camel-validate
+Greenfield: /camel-brainstorm -> /camel-plan -> /camel-execute -> /camel-validate <PIPELINE_ID>
+Migration:  /camel-migrate    -> /camel-plan -> /camel-execute -> /camel-validate <PIPELINE_ID>
 ----
 
 Both pipelines share plan, execute and validate; only the design entry differs. Runtime verification runs inside

@@ -30,10 +30,10 @@ Validation is static and report-only.
 ## Reporting Contract
 
 Record errors, warnings, evidence, and recommendations in exactly one Markdown
-report selected by `camel-validate`:
+draft. Publish it with `doc publish-validation` and return the path printed by the command:
 
 - Pipeline-scoped: `docs/camel-kit/<PIPELINE_ID>/validation-report.md`
-- Project-scoped: `docs/validation-report-YYYY-MM-DD_HH-mm.md`
+- Project-scoped: UTC-timestamped report under `docs/`, with a numeric suffix on a collision
 
 A failed check is reported and routed to the owning implementation path;
 validation does not generate or modify application/test artifacts. There are no

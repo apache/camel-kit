@@ -15,8 +15,7 @@ resolve what failed or was skipped before deploying.
 == Environment check
 
 Before the phases run, the skill reads `project.runtime` from `.camel-kit/config.properties` (`main`, `spring-boot`
-or `quarkus`) and checks the tools: the Maven wrapper or a system `mvn` for Spring Boot and Quarkus, JBang for Camel
-Main, the JDK, Docker, and the Camel JBang test plugin. It prints what it found and which phases can run; nothing is
+or `quarkus`) and checks the tools: the Maven wrapper or a system `mvn` for Spring Boot and Quarkus, JBang for Camel Main and Citrus, the JDK, Docker, and any installed Camel test plugin. It prints what it found and which phases can run; nothing is
 skipped silently.
 
 [cols="1,1,2"]
@@ -27,7 +26,7 @@ skipped silently.
 | JDK | Phase 1 for every runtime | Runtime verification skipped
 | JBang | Phase 1 for Camel Main | Startup smoke verification skipped
 | Docker | The tests that declare Testcontainers | Those tests skipped; container-free and mock-only tests still run
-| `camel test` plugin | Phase 2 | Test verification skipped
+| Neither a version-matched Camel test plugin nor the pinned Citrus JBang runner | Phase 2 | Test verification skipped
 |===
 
 [[phase1]]
@@ -54,17 +53,14 @@ Build attempt 3: PASS
 
 The skill discovers every `+*.it.yaml+` file in the project, validates each one against the configured Citrus version
 and the approved task and design, classifies the files that declare Testcontainers as Docker-dependent, and runs the
-runnable ones with the Camel JBang test plugin:
-
-[source,bash]
-----
-camel test run <test-files>
-----
+runnable ones with the selected project's Citrus version. The installed `camel-test/guides/test-runner.md`
+checks the installed test plugin's resolved Citrus dependency. When it matches, the plugin can run the tests.
+For an absent, mismatched or unknown plugin binding, JBang runs the exact `org.citrusframework:citrus-jbang`
+version from the project. Each selected file is passed separately with its verified dependencies.
 
 Citrus owns the test lifecycle: Testcontainers start and stop the required databases or brokers, the Camel
 integration is started through the JBang runner, and send and receive actions check the behaviour; external APIs are
-mocked. The phase is skipped, with the reason, when phase 1 failed, when no test file exists, when the test plugin is
-missing, or when Docker is unavailable and every discovered test needs it.
+mocked. The phase is skipped, with the reason, when phase 1 failed, when no test file exists, when neither runner is available, or when Docker is unavailable and every discovered test needs it.
 
 Failures are classified and routed, with the same 15-attempt ceiling and short-circuit rule as phase 1.
 

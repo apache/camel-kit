@@ -89,7 +89,7 @@ public final class PrerequisiteChecker {
     }
 
     static String missingCamelTestPluginHint() {
-        return "runtime verification will skip Citrus test phase";
+        return "use the pinned Citrus JBang runner for test verification";
     }
 
     // ------------------------------------------------------------------

@@ -13,6 +13,7 @@ import org.apache.camel.kit.command.CliCommand;
 import org.apache.camel.kit.command.KitOptionParser;
 import org.apache.camel.kit.command.PathConverter;
 import org.apache.camel.kit.doc.DocumentationEvidence;
+import org.apache.camel.kit.ship.controller.ShipRun;
 import org.apache.camel.kit.util.AtomicFileWriter;
 
 import org.aesh.command.CommandDefinition;
@@ -36,8 +37,8 @@ public class DocPublishValidationCommand extends CliCommand {
     public Integer call() {
         try {
             Path root = project.toRealPath();
-            Path draft = DocumentationEvidence.resolve(root, input);
-            Path docs = DocumentationEvidence.resolve(root, Path.of("docs"));
+            Path draft = resolveDraft(root);
+            Path docs = DocumentationEvidence.resolve(project, Path.of("docs"));
             if (!docs.equals(draft.getParent())
                     || !draft.getFileName().toString().matches("validation-report-draft-[a-zA-Z0-9_-]+\\.md")
                     || !Files.isRegularFile(draft) || Files.size(draft) == 0) {
@@ -45,10 +46,10 @@ public class DocPublishValidationCommand extends CliCommand {
             }
             Path destination;
             if (pipeline != null) {
-                if (!pipeline.matches("[0-9]{3}-[a-z0-9]+(?:-[a-z0-9]+)*")) {
+                if (!ShipRun.isPipelineId(pipeline)) {
                     throw new IOException("Invalid manual pipeline ID: " + pipeline);
                 }
-                destination = DocumentationEvidence.resolve(root,
+                destination = DocumentationEvidence.resolve(project,
                         Path.of("docs", "camel-kit", pipeline, "validation-report.md"));
                 if (!Files.isDirectory(destination.getParent())) {
                     throw new IOException("Missing pipeline directory: " + destination.getParent());
@@ -80,4 +81,19 @@ public class DocPublishValidationCommand extends CliCommand {
             return 1;
         }
     }
+
+    private Path resolveDraft(Path root) throws IOException {
+        // Java may resolve "." physically while the shell supplies the draft under its logical working directory.
+        if (input.isAbsolute() && !input.startsWith(project.toAbsolutePath().normalize()) && !input.startsWith(root)) {
+            Path prefix = input.getRoot();
+            for (Path part : input) {
+                prefix = prefix.resolve(part);
+                if (Files.isSameFile(root, prefix)) {
+                    return DocumentationEvidence.resolve(prefix, input);
+                }
+            }
+        }
+        return DocumentationEvidence.resolve(project, input);
+    }
+
 }

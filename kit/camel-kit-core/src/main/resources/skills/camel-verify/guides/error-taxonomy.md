@@ -219,7 +219,7 @@ spec field mappings. If validation finds issues, re-generate the XSLT using the 
 
 ## Test Errors (Phase 2)
 
-These errors appear during `camel test run *.it.yaml`.
+These errors appear when the selected Citrus runner executes a validated test file.
 
 ### Citrus Assertion Mismatch
 

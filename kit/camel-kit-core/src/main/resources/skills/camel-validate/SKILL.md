@@ -47,7 +47,7 @@ Use `/camel-validate <PIPELINE_ID>` for a particular pipeline.
    directory and validate the provenance of its inputs using shared/pipeline-infrastructure.md. An invalid ID, missing directory or stale input stops the scoped run.
 3. A bare direct call or a selected route/module is project-scoped even during a migration. Read shared/direct-project.md. Inspect the
    selected build and routes, ask for ambiguous inputs, and run the same applicable quality checks below.
-   Skip pipeline resolution, migration target, pipeline baseline comparison and design/plan provenance in this
+   Skip pipeline resolution, migration target, pipeline-specific change attribution and design/plan provenance in this
    mode. Do not read or change activePipeline, a pipeline report, stage, or Ship state.
 
 **Announce at start:** "I'm using the camel-validate skill to analyze route quality."
@@ -90,9 +90,13 @@ Record resolved file paths, not bare flow names. Pass the exact `ROUTE_FILES` an
 
 ## Existing Project Baseline Validation
 
-**For pipeline validation only**, check `.camel-kit/config.properties` for `project.type=existing`.
+Check `.camel-kit/config.properties` for `project.type=existing`. The project baseline applies in both invocation modes.
 
-If this is an existing project, establish and verify against a baseline BEFORE validating new capabilities:
+For an existing project, load the recorded baseline before checking new capabilities. On a bare project check,
+use Step 1 and the per-test comparison in Step 4 with the project or module's current results. State the tested modules. For a module-scoped check, compare only its baseline test IDs with a complete run
+of that module and report the scope. If no comparable results are available, record UNVERIFIED.
+Use the actual route inventory for static checks. Steps 2 and 3 attribute changes to a design and plan and apply
+only to a pipeline. A direct check never reads the active migration to perform this comparison.
 
 ### Step 1: Load the Baseline
 
@@ -125,15 +129,13 @@ The baseline is usable only when ALL of these hold:
   means there is no per-test evidence.)
 - `complete` is `true`. If `complete` is `false`, some test reports could not be parsed, so the evidence is incomplete.
 - `revision` is a Git revision (not `unknown`) and `dirty` is `false` (no tracked file had uncommitted changes), so the
-  results describe the project as it was before this pipeline. If `git merge-base --is-ancestor <revision> HEAD` fails, the baseline belongs to different code.
+  results describe the project as it was before the changes under review. If `git merge-base --is-ancestor <revision> HEAD` fails, the baseline belongs to different code.
 
-**Baseline must be captured BEFORE execute modifies code.** If it is not usable, you CANNOT establish it now, because
-the working tree already contains this pipeline's changes. Running the tests now and calling the result the baseline
+**Baseline must be captured before the changes under review.** Never create or overwrite it during validation. Running the tests now and calling the result the baseline
 would hide regressions.
 
 **If the baseline is not usable:**
-- Report in **Unavailable Evidence**: "Cannot verify baseline preservation: no per-test baseline was captured before
-  execute" and give the reason from the file.
+- Report in **Unavailable Evidence**: "Cannot verify baseline preservation: no usable per-test evidence predates the changes" and give the reason from the file.
 - Mark "Baseline Preserved" as **UNVERIFIED**.
 - DO NOT run the tests and call that the baseline.
 - You may still run the current tests to report their results, labelled as current results only.
@@ -165,7 +167,7 @@ would hide regressions.
    Files marked "modify" are existing files that were changed
    ```
 
-**If the baseline inventory files do not exist:** there is no record of which files existed before this pipeline. Do
+**If the baseline inventory files do not exist:** there is no record of which files existed before the changes under review. Do
 not reconstruct one from the current tree. Report it under **Unavailable Evidence** and mark the baseline checks
 **UNVERIFIED**.
 
@@ -233,7 +235,7 @@ Run the project's tests again with the project's own wrapper, so the current res
 
 Then read the current per-test outcomes from the Surefire/Failsafe XML reports (`target/surefire-reports/TEST-*.xml`,
 `target/failsafe-reports/TEST-*.xml`, including module directories). Delete stale reports first if they predate this run.
-Do not run a subset of the baseline tests and do not rely on console totals. Build test IDs using the same module-qualified
+Within the reported scope, do not run a subset of the baseline tests and do not rely on console totals. Build test IDs using the same module-qualified
 format as the baseline: `[module:]class#method` (module prefix only for non-root modules).
 
 If the baseline is usable (Step 1), compare **by test identity** (`[module:]class#method`), never by totals:
@@ -248,6 +250,9 @@ If the baseline is usable (Step 1), compare **by test identity** (`[module:]clas
 | failed or error | passed | Fixed; note as an improvement |
 | failed or error | missing | Report it; the pre-existing failure disappeared |
 | not in baseline | any | New test; validate it with the new capabilities |
+
+For a project-scoped check, a missing previously passing test is a regression. Do not consult a pipeline design
+for exceptions.
 
 Equal failure counts do not mean equal outcomes: one test fixed and another broken has the same totals, and the
 comparison above reports that as a regression.
@@ -391,26 +396,14 @@ later finalization separately. Pending finalization never excuses real discrepan
 
 ## Validation Report
 
-After completing all validation checks, generate a markdown report saved to:
-
-- **Chained mode and standalone pipeline-scoped:** `docs/camel-kit/<PIPELINE_ID>/validation-report.md`
-- **Standalone project-scoped (bare direct call):** `docs/validation-report-YYYY-MM-DD_HH-mm.md`
+The publisher places a pipeline report under `docs/camel-kit/<PIPELINE_ID>/` and a project report directly under
+`docs/`. Prepare the report as a draft using the procedure below.
 
 <!-- camel-kit:step report -->
 
 ### Report Format
 
 ```markdown
----
-staleness:
-  stale: false
-  since: null
-  reason: null
-generated:
-  at: "<current ISO-8601 timestamp>"
-  by: camel-validate
-  # Add `from: execution-report.md` only when that file actually exists.
----
 # Validation Report
 
 **Date:** YYYY-MM-DD HH:mm
@@ -462,10 +455,7 @@ generated:
 ```
 
 <HARD-RULE>
-ALWAYS generate the validation report.
-- In chained mode and standalone pipeline-scoped mode, save to `docs/camel-kit/<PIPELINE_ID>/validation-report.md`.
-- In standalone project-scoped mode (bare direct call), save to `docs/validation-report-YYYY-MM-DD_HH-mm.md`.
-This creates an audit trail of validation results over time.
+ALWAYS generate the validation report. Write only the draft. Publish it using the command below and return the printed path.
 </HARD-RULE>
 
 **Publish the completed report.** Write it to a fresh project-contained scratch file under

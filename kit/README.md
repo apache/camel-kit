@@ -23,12 +23,12 @@ Camel-Kit adds structured AI-agent workflows to your assistant that guide you th
 Entry:        /camel-start         (routes migration, planning, execution, validation,
                                     debugging, or greenfield work based on context)
 
-Greenfield:   /camel-brainstorm → /camel-plan → /camel-execute → /camel-validate
+Greenfield:   /camel-brainstorm → /camel-plan → /camel-execute → /camel-validate <PIPELINE_ID>
                                                       ├── implements (camel-implement)
                                                       ├── verifies (camel-verify, internal)
                                                       └── tests (camel-test)
 
-Migration:    /camel-migrate    → /camel-plan → /camel-execute → /camel-validate
+Migration:    /camel-migrate    → /camel-plan → /camel-execute → /camel-validate <PIPELINE_ID>
 
 Utilities:    /camel-ship          (Technology Preview — delegate to the local Ship controller)
               /camel-knowledge     (documentation Q&A)
@@ -64,10 +64,10 @@ Utilities:    /camel-ship          (Technology Preview — delegate to the local
 | Java 21+ | Runtime | [SDKMAN](https://sdkman.io/), [Adoptium](https://adoptium.net/), or your package manager |
 | [JBang](https://www.jbang.dev/) | CLI launcher for camel-kit | See below |
 | [Camel JBang](https://camel.apache.org/manual/camel-jbang.html) | `camel run` for route execution and runtime verification | `jbang app install camel@apache/camel` |
-| [Camel JBang test plugin](https://camel.apache.org/manual/camel-jbang.html) | `camel test run` for Citrus integration tests in the verify loop | `camel plugin add test` |
+| [Camel JBang test plugin](https://camel.apache.org/manual/camel-jbang.html) | Optional when its Citrus version matches the project. JBang also runs the pinned Citrus version directly. | `camel plugin add test` |
 | [Docker](https://docs.docker.com/get-docker/) | Conditional: external-service probes and full Citrus/Testcontainers verification | Install Docker Engine or Docker Desktop |
 
-Camel JBang and its test plugin are needed for the complete execution and verification loops. Docker-dependent checks are reported as skipped when Docker is unavailable; design, planning, and checks that do not need containers still work.
+Camel JBang is needed for checks that start a Camel CLI route. Citrus tests use a matching test plugin or the pinned Citrus JBang runner. Docker-dependent checks are reported as skipped when Docker is unavailable; design, planning, and checks that do not need containers still work.
 
 **Technology Preview:** Camel Ship is still being stabilized. Its behavior and interfaces may change, and it is not recommended for production use. For the established staged workflow, start with `/camel-start`.
 

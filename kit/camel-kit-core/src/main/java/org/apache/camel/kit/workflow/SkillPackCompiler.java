@@ -16,12 +16,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -78,6 +76,9 @@ public final class SkillPackCompiler {
 
     static byte[] compile(ClassLoader loader, List<String> selected) throws Exception {
         List<String> ids = new ArrayList<>(List.of("core"));
+        if (!selected.contains("developer-tasks")) {
+            ids.add("developer-tasks");
+        }
         ids.addAll(selected);
         Map<String, SkillPack> packs = SkillPack.load(loader, ids);
         return new SkillPackCompiler(loader).assemble(packs);
@@ -190,7 +191,8 @@ public final class SkillPackCompiler {
         }
         List<String> routes = new ArrayList<>();
         for (Declaration d : entries.values()) {
-            if (!d.kind().equals("skill") || base.containsKey(d.key())) {
+            if (!d.kind().equals("skill")
+                    || workflow.skills().stream().anyMatch(skill -> skill.name().equals(d.name()))) {
                 continue;
             }
             JsonNode header = skillHeader(d);
@@ -231,53 +233,52 @@ public final class SkillPackCompiler {
         if (!"1.0".equals(workflow.version())) {
             throw new IOException("Unsupported core workflow contract " + workflow.version() + " in " + source);
         }
-        Map<String, String> owners = new TreeMap<>();
-        Set<String> classified
-                = workflow.skills().stream().map(WorkflowSkill::name).collect(Collectors.toSet());
+        Map<String, WorkflowSkill> classified = new TreeMap<>();
+        workflow.skills().forEach(skill -> classified.put(skill.name(), skill));
         for (SkillPack pack : packs.values()) {
-            for (String skill : pack.bundledSkills()) {
-                if (!classified.contains(skill) || !packs.get("core").requires().contains(pack.id())) {
-                    throw new IOException(pack.id() + ": invalid bundled skill " + skill);
+            if (pack.skillTrees().isEmpty()) {
+                continue;
+            }
+            URL descriptor = SkillPack.uniqueResource(loader, SkillPack.directory(pack.id()) + "pack.yaml");
+            if (descriptor.openConnection() instanceof JarURLConnection jar) {
+                try (var fs = FileSystems.newFileSystem(Path.of(jar.getJarFileURL().toURI()))) {
+                    readSkillTrees(fs.getPath("/skills"), pack, classified);
                 }
-                if (owners.putIfAbsent(skill, pack.id()) != null) {
-                    throw new IOException(pack.id() + ": duplicate bundled skill " + skill);
-                }
+            } else {
+                Path root = Path.of(descriptor.toURI()).getParent().resolve("../../../../skills").normalize();
+                readSkillTrees(root, pack, classified);
             }
         }
-        if (source.openConnection() instanceof JarURLConnection jar) {
-            try (var fs = FileSystems.newFileSystem(Path.of(jar.getJarFileURL().toURI()))) {
-                readCoreFiles(fs.getPath("/skills"), workflow, owners);
+        for (String name : classified.keySet()) {
+            if (!base.containsKey("skill/" + name)) {
+                throw new IOException("Core workflow skills missing SKILL.md: " + name);
             }
-        } else {
-            readCoreFiles(Path.of(source.toURI()).getParent().resolve("../skills").normalize(), workflow, owners);
         }
         return workflow;
     }
 
-    private void readCoreFiles(Path root, WorkflowManifest workflow, Map<String, String> owners) throws IOException {
-        Map<String, WorkflowSkill> expected = new TreeMap<>();
-        workflow.skills().forEach(skill -> expected.put(skill.name(), skill));
-        try (var paths = Files.walk(root)) {
-            for (Path file : paths.filter(Files::isRegularFile).sorted().toList()) {
-                String path = root.relativize(file).toString().replace('\\', '/');
-                String key = path.matches(SkillPack.ID + "/SKILL\\.md")
-                        ? "skill/" + path.substring(0, path.indexOf('/')) : "resource/" + path;
-                List<String> requires = List.of();
-                if (key.startsWith("skill/")) {
-                    WorkflowSkill skill = expected.remove(key.substring("skill/".length()));
-                    if (skill == null) {
-                        throw new IOException("Undeclared core " + key + " in " + path);
-                    }
-                    requires = skill.requires();
-                }
-                String pack = owners.getOrDefault(path.split("/", 2)[0], "core");
-                var d = new Declaration(pack, key, new Entry(1, "skills/" + path, null, requires, null, List.of()));
-                base.put(key, d);
-                resources.put(d, Files.readAllBytes(file));
+    private void readSkillTrees(Path root, SkillPack pack, Map<String, WorkflowSkill> classified) throws IOException {
+        for (String name : pack.skillTrees()) {
+            if (!name.matches(SkillPack.ID)) {
+                throw new IOException(pack.id() + ": invalid skill tree " + name);
             }
-        }
-        if (!expected.isEmpty()) {
-            throw new IOException("Core workflow skills missing SKILL.md: " + expected.keySet());
+            Path tree = root.resolve(name);
+            if (!Files.isDirectory(tree) || !name.equals("shared") && !Files.isRegularFile(tree.resolve("SKILL.md"))) {
+                throw new IOException(pack.id() + ": missing skill tree " + name);
+            }
+            try (var paths = Files.walk(tree)) {
+                for (Path file : paths.filter(Files::isRegularFile).sorted().toList()) {
+                    String path = root.relativize(file).toString().replace('\\', '/');
+                    boolean skill = path.equals(name + "/SKILL.md");
+                    String key = skill ? "skill/" + name : "resource/" + path;
+                    List<String> requires = skill && classified.containsKey(name)
+                            ? classified.get(name).requires() : List.of();
+                    var d = new Declaration(
+                            pack.id(), key, new Entry(1, "skills/" + path, null, requires, null, List.of()));
+                    SkillPack.register(base, d);
+                    resources.put(d, Files.readAllBytes(file));
+                }
+            }
         }
     }
 

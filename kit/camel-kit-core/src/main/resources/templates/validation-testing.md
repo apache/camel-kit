@@ -6,7 +6,7 @@ Guidelines for generating Citrus test files to verify route behavior.
 
 ## Overview
 
-Camel-kit generates [Citrus](https://citrusframework.org/) test files to verify route behavior. Tests use YAML format and integrate with `camel test` command.
+Camel-kit generates [Citrus](https://citrusframework.org/) test files to verify route behavior. Tests use YAML format and run with the project’s Citrus version.
 
 ---
 
@@ -158,16 +158,11 @@ finally:
 
 ## Running Tests
 
+Use the installed `camel-test/guides/test-runner.md` to select a matching Camel test plugin or the pinned Citrus
+JBang runner. Pass each validated test (for example `test/order-ingestion.camel.it.yaml`) as a separate argument,
+using only the dependencies required by those tests.
+
 ```bash
-# Install test plugin (first time)
-camel plugin add test
-
-# Run single test
-camel test run test/order-ingestion.camel.it.yaml
-
-# Run all tests
-camel test run test/
-
 # Export to Maven project for CI/CD
 camel export routes.camel.yaml --runtime quarkus --dir target/project
 ```
@@ -178,7 +173,7 @@ camel export routes.camel.yaml --runtime quarkus --dir target/project
 
 The implementation plan includes Citrus YAML test tasks for every route.
 `camel-execute` creates the route and planned tests, then its internal
-`camel-verify` phase runs `camel test run` once after all implementation tasks.
+`camel-verify` phase runs the selected Citrus runner after all implementation tasks.
 The final `camel-validate` phase is static and report-only; it neither generates
 tests nor application artifacts. Retired dotted generation/test commands are
 not part of this workflow.
