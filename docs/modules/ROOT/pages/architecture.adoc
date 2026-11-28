@@ -40,7 +40,7 @@ front matter against it.
 | `AGENTS.md`, or the agent's own entry file (`CLAUDE.md`, `QWEN.md`, `.github/copilot-instructions.md`)
 
 | 2. Skills
-| Thirteen skills in four tiers (entry, pipeline, utilities, internal) plus the shared guides: structured prompts
+| Fifteen skills in four tiers (entry, pipeline, utilities, internal) plus the shared guides: structured prompts
   with step-by-step procedures, tool calls, conditions and guide imports, loaded progressively
 | `kit/camel-kit-core/src/main/resources/skills/`, copied into the agent's skills directory by `init`
 
@@ -80,7 +80,7 @@ together in one archive.
 The package and resource enumeration order has no precedence.
 
 `init` installs the catalog's files and generates host entry points from its workflow. The assistant reads the
-composed instructions at the declared step. Public pack skills appear in the installed `camel-start` decision
+composed instructions at the declared step. Additional public skills supplied by extension packs appear in the installed `camel-start` decision
 tree and in host instructions that list direct commands. Doctor checks the commands, skills and supporting files
 against the same catalog. The default selection exposes
 eleven public commands and keeps the four internal skills available to their callers.

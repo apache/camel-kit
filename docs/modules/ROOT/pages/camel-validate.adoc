@@ -21,7 +21,8 @@ With an explicit pipeline ID or a handoff from Execute, validation is pipeline-s
 it cross-references the design, the plan and the execution report under `docs/camel-kit/<pipeline-id>/`, checks
 their provenance with `camel-kit doc check`, and stops on a stale artifact until you choose to regenerate it, abort,
 or proceed with that exact revision. A bare direct invocation is always project-scoped and validates the routes found in the
-current project.
+current project. For an existing project it also compares current per-test results with a usable baseline from
+`init --record-baseline`. Missing or incomplete evidence is reported as unverified.
 
 [[checks]]
 == Checks

@@ -153,7 +153,7 @@ Prerequisites:
   Java 17+          ✓ (21.0.3)
   JBang             ✓ (0.136.0)
   Camel JBang       ✓ (4.18.1)
-  Camel test plugin ✗ (not found — runtime verification will skip Citrus test phase)
+  Camel test plugin ✗ (not found — use the pinned Citrus JBang runner for test verification)
 ```
 
 The check is non-blocking -- it warns but never fails the init. Design and planning work without Camel JBang; only execution and verification need it.
@@ -1129,15 +1129,28 @@ GitHub Copilot CLI now uses its native `.github/skills/` surface exclusively. Ol
 
 ### /camel-citrus
 
-Name the route and expected outcome, for example `/camel-citrus test the orders route with an empty order`.
-The assistant resolves the target project and Citrus version and uses the same test guides as Execute.
-Ask to run a selected test for observed results.
+**Purpose:** Author or run Citrus integration tests for a selected route.
+
+**When to use:** Supply the route, expected behavior and permitted services to test an existing project.
+
+**Produces:** Test files and fixtures. A requested run also returns the observed result.
+
+**Example:** `/camel-citrus test the orders route with an empty order`
+
+---
 
 ### /camel-prototype
 
-Try `/camel-prototype copy an order file to an outbox`. The assistant creates the route, sample input,
-required local setup and a README with the run command. Ask to run it. Use `/camel-prototype continue` to
-carry the files, service choices and actual results into Brainstorm, including in a new session.
+**Purpose:** Try a runnable Camel route before starting a design.
+
+**When to use:** Explore a concrete input and expected result. Ask to run it when ready.
+
+**Produces:** A sample route, input, local setup and a README with the run command and observed results.
+Use `/camel-prototype continue` to take the saved sample into Brainstorm in this or a later session.
+
+**Example:** `/camel-prototype copy an order file to an outbox`
+
+---
 
 ### /camel-debug
 
@@ -1195,7 +1208,7 @@ For a static quality check, use `/camel-validate`.
 **How it works (3-phase loop):**
 
 1. **Build Verification** -- compiles Spring Boot and Quarkus projects with `./mvnw`; Camel Main runs its startup smoke test instead. Classifies failures and auto-fixes missing dependencies/version conflicts or routes to internal implementation/validation handling. Up to 15 iterations.
-2. **Test Verification** -- runs Citrus integration tests via `camel test run`. Citrus tests are self-contained: Testcontainers start external services, `camel:jbang:run` starts the Camel integration, send/receive actions validate behavior. Classifies test failures and routes to internal implementation handling, internal test regeneration, or self-repair. Up to 15 iterations.
+2. **Test Verification** -- runs Citrus integration tests with the version-matched Camel test plugin or the pinned Citrus JBang runner. Citrus tests are self-contained: Testcontainers start external services, `camel:jbang:run` starts the Camel integration, send/receive actions validate behavior. Classifies test failures and routes to internal implementation handling, internal test regeneration, or self-repair. Up to 15 iterations.
 3. **Report** -- structured summary with phase outcomes, fixes applied, and issues found.
 
 **Error classification:**
@@ -1253,6 +1266,11 @@ camel-kit init my-project --ai claude
 
 # Validate (standalone, any project)
 /camel-validate                          # Validate routes in current project
+
+# Direct developer tasks
+/camel-citrus test the orders route with an empty order
+/camel-prototype copy an order file to an outbox
+/camel-prototype continue
 
 # Documentation lookup
 /camel-knowledge What changed in my Camel release?

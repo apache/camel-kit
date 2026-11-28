@@ -37,7 +37,7 @@ stage skills such as `camel-validate/SKILL.md`. Edit the bound pack resource to 
 
 Pipeline (user-invocable):
 `/camel-start` → `/camel-brainstorm` or `/camel-migrate` → `/camel-plan` →
-`/camel-execute` → `/camel-validate`
+`/camel-execute` → `/camel-validate <PIPELINE_ID>`
 
 Utilities: `/camel-ship`, `/camel-knowledge`, `/camel-debug`, `/camel-citrus`, `/camel-prototype`
 

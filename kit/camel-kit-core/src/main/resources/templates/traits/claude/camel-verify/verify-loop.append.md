@@ -10,10 +10,10 @@ Instead of polling in a tight loop after running `mvn verify`, use `ScheduleWake
 
 ### Citrus Test Pacing
 
-When running `camel test run` in Phase 2 (Test Verification), use pacing to avoid cache burns:
+When running the selected Phase 2 Citrus runner:
 
-- Apply the base verify-loop test preflight, enumerate each validated regular test path, and run fixed discrete argv
-  `camel`, `test`, `run`, `<path>...` via `Bash` with `run_in_background: true`; never expand a loaded glob
+- Apply the base verify-loop test preflight, enumerate each validated regular test path, and use the fixed discrete argv
+  selected by `camel-test/guides/test-runner.md` via `Bash` with `run_in_background: true`; never expand a loaded glob
 - Use `ScheduleWakeup` with `delaySeconds: 180` and `reason: "waiting for Citrus integration tests to complete"`
 - On wake, check the background task output for pass/fail
 - After a fix attempt, use a shorter delay (90s) since targeted fixes verify faster

@@ -109,7 +109,8 @@ The completion summary lists the tasks, the generated files, the review results,
 full verification report, and is saved as `execution-report.md` with provenance metadata; the downstream validation
 report is marked stale. The execute parent drafts current-system docs and reconciles approved ADR metadata after
 implementation. In chained mode the pipeline continues to `/camel-validate`, then the parent finalizes documentation
-using its findings. Standalone execution records missing validation as partial and stops; documentation-only
+using its findings. Standalone execution records missing validation as partial and prints the next command with the pipeline ID, for example
+`/camel-validate 001-orders`; documentation-only
 reconciliation owns finalization after a later standalone validation. Report documentation status and evidence
 separately from implementation completion. The initial execution report uses pending/partial/failed documentation
 status. After chained finalization, emit the final documentation result with its report and receipt paths separately;

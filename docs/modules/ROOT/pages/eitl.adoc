@@ -42,7 +42,7 @@ real implementation generates the project files.
 == After the code: the verification loop
 
 Once all tasks are implemented, the internal `camel-verify` skill builds or starts the application, runs the Citrus
-tests with `camel test run`, and reports. The Camel integration is launched inside each test, Testcontainers start
+tests with the matching plugin or pinned Citrus JBang runner, and reports. The Camel integration is launched inside each test, Testcontainers start
 the required databases or brokers when a test declares them and Docker is available, and external APIs are mocked.
 Build and test failures are classified and routed:
 

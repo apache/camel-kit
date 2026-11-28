@@ -16,7 +16,7 @@ class PrerequisiteCheckerTest {
     @Test
     void missingCamelTestPluginHintDoesNotAdvertiseInternalVerifyCommand() {
         String hint = PrerequisiteChecker.missingCamelTestPluginHint();
-        assertTrue(hint.contains("runtime verification"));
+        assertTrue(hint.contains("pinned Citrus JBang runner"));
         assertFalse(hint.contains("/camel-verify"));
     }
 

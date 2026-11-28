@@ -700,7 +700,7 @@ Save the completion summary as `docs/camel-kit/<PIPELINE_ID>/execution-report.md
   documentation review report before recording, then emit a separate final summary with COMPLETE/PARTIAL/FAILED,
   current-doc paths, receipt/report paths and unresolved discrepancies. Preserve the earlier execution and validation
   reports as evidence of their stage; do not rewrite them to imply the receipt existed before finalization.
-- **Standalone mode:** print confirmation and STOP. Do NOT auto-invoke validate.
+- **Standalone mode:** print the execution report path and `/camel-validate <PIPELINE_ID>` with the resolved ID filled in, then STOP. Do NOT auto-invoke validate.
 
 ---
 

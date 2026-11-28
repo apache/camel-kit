@@ -2,10 +2,6 @@
 
 > Seven non-negotiable laws enforced across ALL pipeline phases. No exceptions. No workarounds. No "just this once."
 
-Direct prototypes and one-off Citrus tests follow `shared/direct-project.md`. Preserve catalog and input checks.
-The pipeline approval and mandatory execution gates govern application implementation; a sample stays isolated,
-with transactions and observability only on request. Begin design only on an explicit prototype handoff.
-
 **Violating the letter of these rules is violating the spirit of these rules.**
 
 ---
@@ -75,7 +71,8 @@ AND A TASK-BASED IMPLEMENTATION PLAN HAS BEEN GENERATED.
 
 > **Direct-mode exception:** In `camel-migrate` direct mode, the user's request already contains
 > concrete deliverables and the skill implements under Iron Laws 1 and 2 with inline validation
-> and a runtime check. The full design→plan→execute pipeline is not required.
+> and a runtime check. For isolated prototypes and standalone Citrus tests, `shared/direct-project.md` defines
+> what may be authored, how to resolve versions, and when the developer must request execution.
 
 The pipeline is: Brainstorm (Design) → Plan → Execute → Validate.
 1. **Understand:** Brainstorm produces a design spec. The user reviews and approves it.

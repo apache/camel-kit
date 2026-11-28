@@ -35,7 +35,7 @@ Entry:       /camel-start       routes to migration, planning,
 Greenfield:  /camel-brainstorm  then the shared stages below
 Migration:   /camel-migrate     then the shared stages below
 
-Shared:      /camel-plan -> /camel-execute -> /camel-validate
+Shared:      /camel-plan -> /camel-execute -> /camel-validate <PIPELINE_ID>
                               |- implements (camel-implement)
                               |- verifies   (camel-verify, internal)
                               '- tests      (camel-test)

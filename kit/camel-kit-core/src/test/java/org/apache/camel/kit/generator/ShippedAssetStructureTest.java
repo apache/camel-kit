@@ -283,6 +283,9 @@ class ShippedAssetStructureTest {
             assertGeneratedContains(ctx, agentName, skills + "camel-test/SKILL.md",
                     "guides/route-analysis.md", "guides/test-generation.md", "guides/test-runner.md");
             assertGeneratedContains(ctx, agentName, skills + "camel-validate/SKILL.md",
+                    "The publish-validation command chooses the final report path",
+                    "The project baseline applies in both invocation modes",
+                    "Write only the draft",
                     "Project check: `" + TEST_COMMAND_PREFIX + " doc publish-validation --project . --input <draft>`",
                     "explicit ID: `" + TEST_COMMAND_PREFIX + " doc publish-validation --project . --input <draft> --pipeline <PIPELINE_ID>`");
             assertGeneratedContains(ctx, agentName, skills + "camel-prototype/SKILL.md",
@@ -659,7 +662,7 @@ class ShippedAssetStructureTest {
             assertContainsAll(verify, agentName + " camel-verify verify-loop trait",
                     "enumerate each validated regular test path",
                     "fixed discrete argv",
-                    "`camel`, `test`, `run`, `<path>...`",
+                    "selected by `camel-test/guides/test-runner.md`",
                     "never expand a loaded glob");
             assertFalse(verify.contains("*.it.yaml"),
                     "Claude verify trait must not reintroduce a shell-expanded test glob");

@@ -23,8 +23,8 @@ xref:manual::camel-jbang.adoc[Camel JBang]. Both forms provide the same commands
 | `camel run` for route execution and runtime verification
 | `jbang app install camel@apache/camel`
 
-| Camel JBang test plugin
-| `camel test run` for the Citrus integration tests in the verification loop
+| Camel JBang test plugin (optional)
+| Runs Citrus tests when its Citrus version matches the project. Otherwise verification uses the pinned JBang runner.
 | `camel plugin add test`
 
 | Docker (conditional)
@@ -35,7 +35,7 @@ xref:manual::camel-jbang.adoc[Camel JBang]. Both forms provide the same commands
 Released Kit {camel-kit-version} and Knowledge {camel-kit-knowledge-version} still support Java 17.
 Generated integrations have their own Java requirements, determined by their selected Camel runtime.
 
-Camel JBang and its test plugin are needed for the complete execution and verification loops. When Docker is not
+Camel JBang is needed for checks that start a Camel CLI route. Citrus tests use a matching test plugin or the pinned Citrus JBang runner. When Docker is not
 available, the checks that need containers are reported as skipped; design, planning and the container-free checks
 still work. `camel-kit init` checks Java, JBang, Camel JBang and the test plugin and reports missing tools as
 warnings without stopping.
@@ -343,7 +343,7 @@ Camel Kit can enhance **existing Camel 4 applications** in addition to creating 
 * The Maven wrapper is **skipped** if it already exists
 * Skills are added; the files Camel Kit ships are refreshed on reinit, and files you add are never touched
 
-The workflow is the same (`/camel-start` → `/camel-brainstorm` → `/camel-plan` → `/camel-execute` → `/camel-validate`), but with additional safeguards:
+The workflow is the same (`/camel-start` → `/camel-brainstorm` → `/camel-plan` → `/camel-execute` → `/camel-validate <PIPELINE_ID>`), but with additional safeguards:
 
 * **Scope protection** - only approved files are modified
 * **Baseline validation** - the per-test baseline is captured before the first edit, and later compared test by test

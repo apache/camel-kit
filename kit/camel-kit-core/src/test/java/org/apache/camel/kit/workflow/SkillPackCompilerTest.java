@@ -85,7 +85,8 @@ class SkillPackCompilerTest {
                         .map(WorkflowManifest.WorkflowSkill::name).collect(Collectors.toSet()));
         assertEquals("camel-validate/SKILL.md",
                 catalog.manifest().contributions().get("step/validate/report/timestamp").path());
-        assertTrue(content(catalog, "camel-validate/SKILL.md").contains("Use the current date and time"));
+        assertTrue(content(catalog, "camel-validate/SKILL.md")
+                .contains("The publish-validation command chooses the final report path"));
         assertFalse(content(catalog, "camel-start/SKILL.md").contains("<!-- camel-kit:step"));
         assertArrayEquals(Files.readAllBytes(Path.of("src/main/resources/skills/shared/iron-laws.md")),
                 catalog.open("shared/iron-laws.md").readAllBytes());
@@ -116,6 +117,32 @@ class SkillPackCompilerTest {
         assertFalse(router.contains("camel-prototype"));
         assertFalse(router.contains("camel-citrus"));
         assertTrue(bindings.get("skill/camel-prototype").requires().contains("skill/camel-brainstorm"));
+    }
+
+    @Test
+    void selectedPackSuppliesItsOwnSkillTreeAndCannotBorrowAnotherModulesFiles() throws Exception {
+        Path own = pack("team", "requires: [core]\nskillTrees: [camel-inspect]");
+        Path skill = Files.createDirectories(own.resolve("skills/camel-inspect"));
+        Files.writeString(skill.resolve("SKILL.md"), SKILL);
+        Files.writeString(skill.resolve("example.txt"), "from team");
+        try (var loader = loader(distribution(own, "team"))) {
+            var catalog = SkillCatalog.load(loader);
+            assertEquals("from team", content(catalog, "camel-inspect/example.txt"));
+            assertEquals("team", catalog.manifest().contributions().get("skill/camel-inspect").pack());
+            assertTrue(content(catalog, "camel-start/SKILL.md").contains("/camel-inspect"));
+        }
+        Path missing = pack("empty", "skillTrees: [camel-validate]");
+        try (var loader = loader(missing)) {
+            var error = assertThrows(IOException.class, () -> SkillPackCompiler.compile(loader, List.of("empty")));
+            assertTrue(error.getMessage().contains("empty: missing skill tree camel-validate"), error::getMessage);
+        }
+        Path duplicate = pack("dup", "skillTrees: [camel-inspect, camel-inspect]");
+        Path tree = Files.createDirectories(duplicate.resolve("skills/camel-inspect"));
+        Files.copy(skill.resolve("SKILL.md"), tree.resolve("SKILL.md"));
+        try (var loader = loader(duplicate)) {
+            var error = assertThrows(IOException.class, () -> SkillPackCompiler.compile(loader, List.of("dup")));
+            assertTrue(error.getMessage().contains("conflicts with dup: skill/camel-inspect"), error::getMessage);
+        }
     }
 
     @Test
@@ -866,7 +893,7 @@ class SkillPackCompilerTest {
                 String validate = content(catalog, "camel-validate/SKILL.md");
                 assertTrue(validate.indexOf("## Validation Report\n") < validate.indexOf(REVIEW));
                 assertTrue(validate.indexOf(REVIEW) < validate.indexOf("### Report Format"));
-                assertFalse(validate.contains("Use the current date and time for the timestamped filename"));
+                assertFalse(validate.contains("The publish-validation command chooses the final report path"));
             }
         }
 
@@ -1405,7 +1432,8 @@ class SkillPackCompilerTest {
             assertTrue(paragraphs.get(protocol - 3).contains("hook --id " + COVERAGE));
             assertTrue(paragraphs.get(protocol - 2).startsWith(REVIEW));
             assertTrue(paragraphs.get(protocol - 1).contains("hook --id " + second));
-            assertTrue(paragraphs.get(protocol + 1).startsWith("Use the current date and time"));
+            assertTrue(paragraphs.get(protocol + 1)
+                    .startsWith("The publish-validation command chooses the final report path"));
             String pathHelp = "open `request.implementation` relative to the host's installed skills directory";
             assertTrue(stage.contains(pathHelp));
             assertEquals(stage.indexOf(pathHelp), stage.lastIndexOf(pathHelp));

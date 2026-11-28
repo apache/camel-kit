@@ -96,10 +96,11 @@ xref:skills.adoc[] for the structure and the tiers.
 [[skill-packs]]
 == Contributing a skill pack
 
-The distribution's core descriptor re-exports its bundled developer tasks. Its dependency can name
-classified skill trees in `bundledSkills` to retain the original `skills/<name>/` paths for every caller and
-host trait. Existing overlays that require `core` can still replace those trees' contributions.
-Third-party packs declare their own skills under `add`.
+The default distribution selects `core` and `developer-tasks`. A pack can list complete skill directories in
+`skillTrees`, for example `skillTrees: [camel-inspect]`. Ship `skills/camel-inspect/SKILL.md` and its guides
+and examples in the same artifact as its descriptor. The compiler loads only that artifact's tree. The core
+workflow declares the existing entry points and their routing. A new extension skill can opt into the router
+through its public frontmatter. Existing overlays that require `core` can still edit the bundled developer tasks.
 
 Put a descriptor in `src/main/resources/META-INF/camel-kit/packs/<id>/pack.yaml`.
 Resource paths in the descriptor are relative to that directory. Pack IDs and the names of skills, stages,

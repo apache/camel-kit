@@ -308,7 +308,7 @@ camel-kit ship --document requirements.md        # Technology Preview
 # In the agent
 /camel-start                                     # route the request
 /camel-brainstorm   /camel-migrate               # design stage
-/camel-plan         /camel-execute   /camel-validate
+/camel-plan         /camel-execute   /camel-validate <PIPELINE_ID>
 /camel-knowledge    /camel-debug     /camel-ship
 /camel-citrus       /camel-prototype
 ----

@@ -509,12 +509,12 @@ Validating test against Citrus schema...
 
 ### Runtime-Specific Test Dependencies
 
-For Main only, create or update `{TEST_DIR}jbang.properties` alongside the test YAML files for execution via
-`camel test run`:
+For Main only, create or update `{TEST_DIR}jbang.properties` alongside the test YAML files to record project dependencies. Resolve the same required modules as exact GAVs
+for the selected runner’s `--dep` argument using `camel-test/guides/test-runner.md`. For a container-free Camel CLI test:
 
 ```properties
 run.deps=org.citrusframework:citrus-camel:{CITRUS_VERSION},\
-org.citrusframework:citrus-testcontainers:{CITRUS_VERSION},\
+org.citrusframework:citrus-jbang-connector:{CITRUS_VERSION},\
 org.citrusframework:citrus-yaml:{CITRUS_VERSION}
 ```
 
@@ -523,11 +523,11 @@ Add component-specific test dependencies as needed:
 | Service | Additional Dependency |
 |---|---|
 | Kafka | `org.citrusframework:citrus-kafka:{CITRUS_VERSION}` |
-| PostgreSQL | `org.testcontainers:postgresql:RELEASE` |
-| MongoDB | `org.testcontainers:mongodb:RELEASE` |
+| PostgreSQL | `org.testcontainers:postgresql:{RESOLVED_TESTCONTAINERS_VERSION}` |
+| MongoDB | `org.testcontainers:mongodb:{RESOLVED_TESTCONTAINERS_VERSION}` |
 
-Use `:RELEASE` for Testcontainers modules unless the project already pins a Testcontainers version in its build. Do not
-emit placeholder tokens in `jbang.properties`.
+For container tests include `citrus-testcontainers` at the selected Citrus version. Resolve connector and driver versions
+from the project build or its test dependency management. Ask for an unresolved version. Write exact versions in `jbang.properties`.
 
 For Spring Boot/Quarkus, do not create `jbang.properties`; add the corresponding test-scoped dependencies to the
 module POM as described in `test-configuration.md`. In every runtime, add Testcontainers dependencies only for

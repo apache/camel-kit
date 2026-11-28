@@ -1,5 +1,6 @@
 package org.apache.camel.kit.command.doc;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
@@ -12,6 +13,8 @@ import org.apache.camel.kit.doc.StalenessInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -69,6 +72,7 @@ class DocCommandsTest {
     }
 
     @Test
+    @Tag("cli-compat")
     void bareValidationPreservesTheActiveMigrationAndScopedValidationPublishesToTheSelectedPipeline() throws Exception {
         String id = "001-orders";
         Path pipeline = Files.createDirectories(tempDir.resolve("docs/camel-kit").resolve(id));
@@ -99,6 +103,49 @@ class DocCommandsTest {
         assertEquals(0, cli.execute("--project", tempDir.toString(), "--input", draft.toString(), "--pipeline", id));
         assertEquals("Execute result", Files.readString(report));
         assertEquals(original, Files.readString(state));
+    }
+
+    @Test
+    @Tag("cli-compat")
+    void publishValidationAcceptsAbsoluteAndRelativeDraftsThroughAProjectAlias() throws Exception {
+        Path project = Files.createDirectory(tempDir.resolve("project"));
+        Path docs = Files.createDirectory(project.resolve("docs"));
+        Path alias = tempDir.resolve("alias");
+        try {
+            Files.createSymbolicLink(alias, project);
+        } catch (IOException | UnsupportedOperationException e) {
+            Assumptions.abort("Project aliases require symbolic link support: " + e.getMessage());
+        }
+        var cli = new CommandRunner(new DocPublishValidationCommand());
+        Path pipeline = Files.createDirectories(docs.resolve("camel-kit/1000-orders"));
+        Path relative = Path.of("docs", "validation-report-draft-orders.md");
+        Files.writeString(project.resolve(relative), "pipeline");
+        assertEquals(0, cli.execute("--project", alias.toString(), "--input", alias.resolve(relative).toString(),
+                "--pipeline", "1000-orders"));
+        assertEquals("pipeline", Files.readString(pipeline.resolve("validation-report.md")));
+        Files.writeString(project.resolve(relative), "logical working directory");
+        assertEquals(0, cli.execute("--project", project.toRealPath().toString(), "--input",
+                alias.resolve(relative).toString()));
+        Files.writeString(project.resolve(relative), "project");
+        assertEquals(0, cli.execute("--project", alias.toString(), "--input", relative.toString()));
+    }
+
+    @Test
+    void refusesInvalidReportDestinationsAndPreservesDrafts() throws Exception {
+        Path docs = Files.createDirectory(tempDir.resolve("docs"));
+        Path draft = Files.writeString(docs.resolve("validation-report-draft-orders.md"), "original");
+        var cli = new CommandRunner(new DocPublishValidationCommand());
+        for (String id : new String[]{"../001-orders", "002-missing"}) {
+            assertEquals(1,
+                    cli.execute("--project", tempDir.toString(), "--input", draft.toString(), "--pipeline", id));
+        }
+        Path traversal = docs.resolve("../docs").resolve(draft.getFileName());
+        assertEquals(1, cli.execute("--project", tempDir.toString(), "--input", traversal.toString()));
+        Path link = Files.createSymbolicLink(docs.resolve("validation-report-draft-link.md"), draft);
+        assertEquals(1, cli.execute("--project", tempDir.toString(), "--input", link.toString()));
+        assertEquals("original", Files.readString(draft));
+        assertTrue(Files.isSymbolicLink(link));
+        assertFalse(Files.exists(docs.resolve("camel-kit")));
     }
 
     @Test

@@ -48,8 +48,8 @@ Before entering the phase loop, check which tools are available. Report explicit
    - If available → tests that declare Testcontainers can run in Phase 2
    - If unavailable → Phase 2 can still run discovered container-free and mock-only tests
 4. Check JDK: `java --version`
-5. If runtime is `main` → also check `jbang --version`
-6. Check Camel test CLI: `camel test --help` — needed for Phase 2 test verification
+5. Check `jbang --version` for the pinned Citrus runner on every runtime and for Main startup
+6. Select the Phase 2 runner using `camel-test/guides/test-runner.md` §6.1. Record the matching plugin binding or pinned JBang coordinate.
 
 ### Report
 
@@ -61,8 +61,8 @@ Runtime:        {runtime from config.properties}
 Maven:          {./mvnw (wrapper) | mvn (system) | not found}
 Docker:         {docker {version} | not found}
 JDK:            {{vendor} {version} | not found}
-JBang:          {{version} | not found | (not needed)}
-Camel test CLI: {available | not found}
+JBang:          {{version} | not found}
+Citrus runner:  {matching plugin | pinned JBang | unavailable, with reason}
 
 Ready for: {list of phases that can run}
 Skipped:   {list of phases that cannot run, with reason}
@@ -78,7 +78,7 @@ If a tool is missing, skip the phases that depend on it. Never fail silently —
 | JDK | Phase 1 for every runtime | "Runtime verification skipped — JDK not available" |
 | JBang | Main Phase 1 | "Startup smoke verification skipped — JBang not available" |
 | Docker | Phase 2 tests that declare Testcontainers | "Test skipped — Docker not available and this test declares Testcontainers" |
-| `camel test` CLI | Phase 2 (Test) | "Test verification skipped — camel test not available" |
+| Neither a matching plugin nor the pinned JBang runner | Phase 2 (Test) | "Test verification skipped — no version-matched Citrus runner available" |
 
 ---
 
@@ -92,7 +92,7 @@ Runtime gates:
 
 - Spring Boot/Quarkus Phase 1 runs only when both Maven and the JDK are available; JBang is irrelevant.
 - Main Phase 1 runs only when both JBang and the JDK are available; Maven is irrelevant.
-- Phase 2 requires the `camel test` CLI. Docker gates only the individual tests classified as Testcontainers-dependent.
+- Phase 2 requires a version-matched runner from `camel-test/guides/test-runner.md`. Docker gates only the individual tests classified as Testcontainers-dependent.
 
 ### Steps
 

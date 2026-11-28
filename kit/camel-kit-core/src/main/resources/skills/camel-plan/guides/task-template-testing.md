@@ -72,7 +72,7 @@ Resolve `TEST_DIR` as the optional `[MODULE_DIR]` prefix plus `src/test/resource
   - `org.citrusframework:citrus-*`
   - `org.testcontainers:testcontainers`
   - `org.testcontainers:[module]` for each required containerized database/broker
-- [ ] Verify: `camel test run [MODULE_DIR]src/test/resources/[flow-name].camel.it.yaml` exits 0 with a passing test
+- [ ] Verify: the runner selected by `camel-test/guides/test-runner.md` runs `[MODULE_DIR]src/test/resources/[flow-name].camel.it.yaml` and exits 0 with a passing test
   summary; omit the entire `[MODULE_DIR]` prefix at the project root
 
 **Review:**

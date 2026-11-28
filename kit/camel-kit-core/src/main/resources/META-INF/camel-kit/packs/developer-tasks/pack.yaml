@@ -1,15 +1,5 @@
 id: developer-tasks
 schema: 1
-# Classified entry points keep the same source and installed paths as their existing callers.
-bundledSkills: [camel-debug, camel-knowledge, camel-validate, camel-design, camel-implement,
+requires: [core]
+skillTrees: [camel-debug, camel-knowledge, camel-validate, camel-design, camel-implement,
                camel-test, camel-verify, camel-citrus, camel-prototype]
-add:
-  resource/camel-prototype/examples/copy.camel.yaml.template:
-    contract: 1
-    resource: copy.camel.yaml.template
-  resource/camel-prototype/examples/order.txt:
-    contract: 1
-    resource: order.txt
-  resource/camel-prototype/examples/README.md.template:
-    contract: 1
-    resource: README.md.template
