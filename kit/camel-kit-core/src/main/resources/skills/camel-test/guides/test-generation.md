@@ -518,16 +518,11 @@ org.citrusframework:citrus-jbang-connector:{CITRUS_VERSION},\
 org.citrusframework:citrus-yaml:{CITRUS_VERSION}
 ```
 
-Add component-specific test dependencies as needed:
-
-| Service | Additional Dependency |
-|---|---|
-| Kafka | `org.citrusframework:citrus-kafka:{CITRUS_VERSION}` |
-| PostgreSQL | `org.testcontainers:postgresql:{RESOLVED_TESTCONTAINERS_VERSION}` |
-| MongoDB | `org.testcontainers:mongodb:{RESOLVED_TESTCONTAINERS_VERSION}` |
-
-For container tests include `citrus-testcontainers` at the selected Citrus version. Resolve connector and driver versions
-from the project build or its test dependency management. Ask for an unresolved version. Write exact versions in `jbang.properties`.
+For Kafka actions add `org.citrusframework:citrus-kafka:{CITRUS_VERSION}`. For container actions add
+`org.citrusframework:citrus-testcontainers:{CITRUS_VERSION}`. Its published dependencies supply the PostgreSQL
+and MongoDB Testcontainers modules. A test that opens a PostgreSQL JDBC connection also needs
+`org.postgresql:postgresql` at the exact version managed by the selected Citrus release. Write exact versions
+in `jbang.properties`.
 
 For Spring Boot/Quarkus, do not create `jbang.properties`; add the corresponding test-scoped dependencies to the
 module POM as described in `test-configuration.md`. In every runtime, add Testcontainers dependencies only for

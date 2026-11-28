@@ -123,11 +123,13 @@ class SkillPackCompilerTest {
     void selectedPackSuppliesItsOwnSkillTreeAndCannotBorrowAnotherModulesFiles() throws Exception {
         Path own = pack("team", "requires: [core]\nskillTrees: [camel-inspect]");
         Path skill = Files.createDirectories(own.resolve("skills/camel-inspect"));
-        Files.writeString(skill.resolve("SKILL.md"), SKILL);
+        Files.writeString(skill.resolve("SKILL.md"),
+                "---\n{name: camel-inspect, description: Inspect an integration., user_invocable: true}\n---\nTree instructions.\n");
         Files.writeString(skill.resolve("example.txt"), "from team");
         try (var loader = loader(distribution(own, "team"))) {
             var catalog = SkillCatalog.load(loader);
             assertEquals("from team", content(catalog, "camel-inspect/example.txt"));
+            assertTrue(content(catalog, "camel-inspect/SKILL.md").contains("\nuser_invocable: true\n"));
             assertEquals("team", catalog.manifest().contributions().get("skill/camel-inspect").pack());
             assertTrue(content(catalog, "camel-start/SKILL.md").contains("/camel-inspect"));
         }

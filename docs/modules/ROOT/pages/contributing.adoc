@@ -67,8 +67,8 @@ A change is finished when all of the following hold:
 * `./mvnw -Psourcecheck validate` passes.
 * A skill, template or trait change passes `ShippedAssetStructureTest`, and the active documents pass
   `ResourceConsistencyTest` (see xref:architecture.adoc#equalization[the contract tests]).
-* Register each core skill in the workflow manifest and document its public command. Pack skills use their
-  descriptor. Check the generated entry points for all eight agents.
+* List the skill directory in `skillTrees` in the owning pack’s `META-INF/camel-kit/packs/<pack-id>/pack.yaml`.
+  Register each core skill in the workflow manifest and document its public command. Check the generated entry points for all eight agents.
 * No version is hardcoded where `distribution.properties` applies.
 * The documentation is updated, and `CHANGELOG.md` for significant changes.
 * Nothing was skipped, disabled or weakened to get a green build; a failing check is reported, not hidden.

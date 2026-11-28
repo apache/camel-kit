@@ -61,8 +61,7 @@ override only the broker address and test-specific offset behavior deliberately.
 
 ### 5.2 Test Dependencies
 
-For Spring Boot/Quarkus only, add required test dependencies to the module POM. The following is an example; include
-Kafka/PostgreSQL or other Testcontainers modules only when they appear in `EXTERNAL_INFRA`:
+For Spring Boot/Quarkus, add the Citrus container module to the module POM when the test uses container actions:
 
 ```xml
 <!-- Test Dependencies -->
@@ -71,19 +70,7 @@ Kafka/PostgreSQL or other Testcontainers modules only when they appear in `EXTER
   <artifactId>citrus-testcontainers</artifactId>
   <scope>test</scope>
 </dependency>
-
-<dependency>
-  <groupId>org.testcontainers</groupId>
-  <artifactId>kafka</artifactId>
-  <scope>test</scope>
-</dependency>
-
-<dependency>
-  <groupId>org.testcontainers</groupId>
-  <artifactId>postgresql</artifactId>
-  <scope>test</scope>
-</dependency>
 ```
 
-For Main, do not create or modify a POM. Record required Citrus coordinates and only the Testcontainers modules present
-in `EXTERNAL_INFRA` as `run.deps` in `{TEST_DIR}jbang.properties`, following `test-generation.md`.
+For Main, record required dependencies as `run.deps` in `{TEST_DIR}jbang.properties`. Use
+`test-generation.md` to select the Citrus connectors and any JDBC driver used by the test.

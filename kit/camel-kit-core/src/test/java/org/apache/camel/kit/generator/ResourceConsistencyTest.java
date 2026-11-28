@@ -1802,8 +1802,8 @@ class ResourceConsistencyTest {
                 "test-generation must not emit unresolved dependency version placeholders");
         assertFalse(testGeneration.contains(":RELEASE"));
         assertTrue(testGeneration.contains("org.citrusframework:citrus-jbang-connector:{CITRUS_VERSION}"));
-        assertTrue(testGeneration.contains("org.testcontainers:postgresql:{RESOLVED_TESTCONTAINERS_VERSION}"));
-        assertTrue(testGeneration.contains("org.testcontainers:mongodb:{RESOLVED_TESTCONTAINERS_VERSION}"));
+        assertFalse(testGeneration.contains("org.testcontainers:"));
+        assertTrue(testGeneration.contains("org.citrusframework:citrus-testcontainers:{CITRUS_VERSION}"));
         assertTrue(testGeneration.contains("Write exact versions"));
         assertTrue(testGeneration.contains("`{TEST_DIR}jbang.properties`"),
                 "JBang test dependencies must be written beside the generated test resources");

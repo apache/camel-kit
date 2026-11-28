@@ -994,7 +994,7 @@ user_invocable: false
 
 3. **Write guide files** in `guides/`. Each guide is a self-contained markdown instruction file loaded by the agent when the skill is active.
 
-4. **Register every core skill** in the [workflow manifest](../kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml) using the criteria above `skills`. For a public skill, add a `commands` entry with `user_facing: true` and `generated_stub: true`, and set the skill’s `generated_command` to that command’s name. For an internal helper, set `generated_command: null`. Update stages, artifacts, transitions and MCP tool allowlists when they change.
+4. List the skill directory in `skillTrees` in the owning pack’s `META-INF/camel-kit/packs/<pack-id>/pack.yaml`. **Register every core skill** in the [workflow manifest](../kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml) using the criteria above `skills`. For a public skill, add a `commands` entry with `user_facing: true` and `generated_stub: true`, and set the skill’s `generated_command` to that command’s name. For an internal helper, set `generated_command: null`. Update stages, artifacts, transitions and MCP tool allowlists when they change.
 
 5. **If registering generated command or skill entry points:** update agent-specific guidance only where the command needs custom behavior beyond the generated stub or project skill. The default generator creates command stubs from the manifest. Agent templates still need updates when they contain human-readable command tables, custom modes, policies, or sub-agent dispatch:
    - Claude Code: update `templates/claude/claude-md.md`

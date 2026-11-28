@@ -139,6 +139,11 @@ class DocCommandsTest {
             assertEquals(1,
                     cli.execute("--project", tempDir.toString(), "--input", draft.toString(), "--pipeline", id));
         }
+        var error = new StringWriter();
+        cli.setErr(new PrintWriter(error));
+        Path missing = tempDir.resolveSibling(tempDir.getFileName() + "-missing").resolve(draft.getFileName());
+        assertEquals(1, cli.execute("--project", tempDir.toString(), "--input", missing.toString()));
+        assertTrue(error.toString().contains("Validation path does not exist"), error::toString);
         Path traversal = docs.resolve("../docs").resolve(draft.getFileName());
         assertEquals(1, cli.execute("--project", tempDir.toString(), "--input", traversal.toString()));
         Path link = Files.createSymbolicLink(docs.resolve("validation-report-draft-link.md"), draft);

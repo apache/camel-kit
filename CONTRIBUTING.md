@@ -375,6 +375,7 @@ Each guide in `guides/` is a self-contained markdown file loaded by the agent wh
 
 ### 4. Register the Skill
 
+List the skill directory name in `skillTrees` in the owning pack’s `META-INF/camel-kit/packs/<pack-id>/pack.yaml`.
 Register every core skill under `skills` in the [workflow manifest](kit/camel-kit-core/src/main/resources/workflow/camel-kit-workflow.yaml). The comments above
 that section explain how to choose its status. Match the source `user_invocable` value in `SKILL.md`.
 
