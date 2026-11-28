@@ -148,6 +148,27 @@ class SkillPackCompilerTest {
     }
 
     @Test
+    void compilerReportsSkillDirectoriesOmittedByThePackSelection() throws Exception {
+        Path module = pack("team", "requires: [core]");
+        Path extra = module.resolve(SkillPack.directory("extra") + "pack.yaml");
+        Files.createDirectories(extra.getParent());
+        Files.writeString(extra, "id: extra\nschema: 1\nrequires: [core]\nskillTrees: [camel-inspect]\n");
+        Path skills = module.resolve("skills");
+        Files.writeString(Files.createDirectories(skills.resolve("camel-inspect")).resolve("SKILL.md"), SKILL);
+        Files.createDirectories(skills.resolve("forgotten-guides"));
+        Path output = temp.resolve("selected.zip");
+
+        String team = assertJava(0, module, temp, SkillPackCompiler.class.getName(), output.toString(), "team");
+        assertTrue(team.contains("Skipping skills/camel-inspect"), team);
+        assertTrue(team.contains("Skipping skills/forgotten-guides"), team);
+
+        String both = assertJava(0, module, temp, SkillPackCompiler.class.getName(), output.toString(), "team,extra");
+        assertFalse(both.contains("Skipping skills/camel-inspect"), both);
+        assertEquals(1, both.lines().filter(line -> line.contains("Skipping skills/forgotten-guides")
+                && line.contains("skillTrees")).count(), both);
+    }
+
+    @Test
     void claudePreservesExistingCommandsThatShareAPackSkillName() throws Exception {
         Path pack = pack("inspect", "add: {skill/camel-inspect: {contract: 1, resource: inspect.md}}");
         write("inspect", "inspect.md", SKILL);
