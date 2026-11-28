@@ -98,7 +98,9 @@ xref:skills.adoc[] for the structure and the tiers.
 
 The default distribution selects `core` and `developer-tasks`. A pack can list complete skill directories in
 `skillTrees`, for example `skillTrees: [camel-inspect]`. Ship `skills/camel-inspect/SKILL.md` and its guides
-and examples in the same artifact as its descriptor. The compiler loads only that artifact's tree. The core
+and examples in the same artifact as its descriptor. The compiler reports each directory under that artifact's
+`skills/` that the selected packs omit. To include it, list it in the owning pack's `skillTrees` and select that pack.
+The core
 workflow declares the existing entry points and their routing. A new extension skill can opt into the router
 through its public frontmatter. Existing overlays that require `core` can still edit the bundled developer tasks.
 

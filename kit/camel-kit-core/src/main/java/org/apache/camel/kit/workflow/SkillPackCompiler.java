@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -235,18 +236,22 @@ public final class SkillPackCompiler {
         }
         Map<String, WorkflowSkill> classified = new TreeMap<>();
         workflow.skills().forEach(skill -> classified.put(skill.name(), skill));
+        Map<Path, List<SkillPack>> modules = new LinkedHashMap<>();
         for (SkillPack pack : packs.values()) {
-            if (pack.skillTrees().isEmpty()) {
-                continue;
-            }
             URL descriptor = SkillPack.uniqueResource(loader, SkillPack.directory(pack.id()) + "pack.yaml");
-            if (descriptor.openConnection() instanceof JarURLConnection jar) {
-                try (var fs = FileSystems.newFileSystem(Path.of(jar.getJarFileURL().toURI()))) {
-                    readSkillTrees(fs.getPath("/skills"), pack, classified);
-                }
+            Path module = descriptor.openConnection() instanceof JarURLConnection jar
+                    ? Path.of(jar.getJarFileURL().toURI())
+                    : Path.of(descriptor.toURI()).getParent().resolve("../../../..").normalize();
+            modules.computeIfAbsent(module, unused -> new ArrayList<>()).add(pack);
+        }
+        for (var module : modules.entrySet()) {
+            Path path = module.getKey();
+            if (Files.isDirectory(path)) {
+                readModuleSkills(path.resolve("skills"), module.getValue(), classified);
             } else {
-                Path root = Path.of(descriptor.toURI()).getParent().resolve("../../../../skills").normalize();
-                readSkillTrees(root, pack, classified);
+                try (var fs = FileSystems.newFileSystem(path)) {
+                    readModuleSkills(fs.getPath("/skills"), module.getValue(), classified);
+                }
             }
         }
         for (String name : classified.keySet()) {
@@ -255,6 +260,26 @@ public final class SkillPackCompiler {
             }
         }
         return workflow;
+    }
+
+    private void readModuleSkills(Path root, List<SkillPack> packs, Map<String, WorkflowSkill> classified)
+            throws IOException {
+        var selected = new HashSet<String>();
+        for (SkillPack pack : packs) {
+            readSkillTrees(root, pack, classified);
+            selected.addAll(pack.skillTrees());
+        }
+        if (Files.isDirectory(root)) {
+            try (var paths = Files.list(root)) {
+                for (Path path : paths.filter(Files::isDirectory).sorted().toList()) {
+                    String name = path.getFileName().toString();
+                    if (!selected.contains(name)) {
+                        System.err.println("Skipping skills/" + name + " in " + root.toUri()
+                                           + ": no selected pack in this artifact lists it in skillTrees.");
+                    }
+                }
+            }
+        }
     }
 
     private void readSkillTrees(Path root, SkillPack pack, Map<String, WorkflowSkill> classified) throws IOException {
