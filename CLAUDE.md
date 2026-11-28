@@ -49,7 +49,7 @@ Rules:
 - **Never hardcode versions** — reference `distribution.properties` (repo root;
   single source of truth for all version pins, copied into the JAR).
 - `skills/shared/` guides feed multiple skills — check every caller before editing.
-- Register core skills in the workflow manifest and pack skills in their pack descriptor. Verify generated
+- List skill directories in the owning pack descriptor’s `skillTrees`. Register core skills in the workflow manifest. Verify generated
   entry points across all eight agents and document public core skills in `docs/commands.md`.
 - Agent traits: `templates/traits/{agent}/{skill}.append.md` — no code registration
   needed. `ShippedAssetStructureTest` enforces the contract; run it after any

@@ -41,6 +41,7 @@ import org.apache.camel.kit.ship.worker.ChangedWorkspaceSecretScanner;
 import org.apache.camel.kit.ship.worker.ShipWorkspace;
 import org.apache.camel.kit.ship.worker.ShipWorkspace.StaleBaselineException;
 import org.apache.camel.kit.ship.worker.ShipWorkspace.Verification;
+import org.apache.camel.kit.workflow.PipelineId;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.StreamReadFeature;
@@ -853,7 +854,7 @@ public final class ShipController {
             boolean materialAmbiguity,
             String report,
             List<UnansweredQuestion> unansweredQuestions) {
-        if (!ShipRun.isPipelineId(pipelineId)) {
+        if (!PipelineId.isValid(pipelineId)) {
             throw failure(
                     "stage-result-invalid",
                     "Ship discovery result has an invalid pipeline ID");
@@ -1818,7 +1819,7 @@ public final class ShipController {
         if (active == null || active.isNull()) {
             return null;
         }
-        if (!active.isTextual() || !ShipRun.isPipelineId(active.textValue())) {
+        if (!active.isTextual() || !PipelineId.isValid(active.textValue())) {
             throw incompatibleState(pipelineFile);
         }
         return active.textValue();

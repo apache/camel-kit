@@ -251,7 +251,7 @@ public final class SkillPackCompiler {
         }
         for (String name : classified.keySet()) {
             if (!base.containsKey("skill/" + name)) {
-                throw new IOException("Core workflow skills missing SKILL.md: " + name);
+                throw new IOException("Core workflow skill missing from the owning pack’s skillTrees: " + name);
             }
         }
         return workflow;
@@ -277,6 +277,9 @@ public final class SkillPackCompiler {
                             pack.id(), key, new Entry(1, "skills/" + path, null, requires, null, List.of()));
                     SkillPack.register(base, d);
                     resources.put(d, Files.readAllBytes(file));
+                    if (skill && !classified.containsKey(name)) {
+                        normalizeSkillHeader(d);
+                    }
                 }
             }
         }
@@ -334,16 +337,20 @@ public final class SkillPackCompiler {
                 throw d.error(ex.getMessage());
             }
             if (d.kind().equals("skill")) {
-                JsonNode header = skillHeader(d);
-                String text = new String(resources.get(d), StandardCharsets.UTF_8);
-                String yaml = FrontmatterHandler.extractFrontmatterYaml(text);
-                // Host metadata adapters insert their visibility flags next to a top-level block key.
-                if (!Pattern.compile("(?m)^user_invocable: *(true|false) *(#.*)?$").matcher(yaml).find()) {
-                    String normalized = SkillPack.YAML.writeValueAsString(header) + "---\n"
-                                        + FrontmatterHandler.extractBody(text);
-                    resources.put(d, normalized.getBytes(StandardCharsets.UTF_8));
-                }
+                normalizeSkillHeader(d);
             }
+        }
+    }
+
+    private void normalizeSkillHeader(Declaration d) throws IOException {
+        JsonNode header = skillHeader(d);
+        String text = new String(resources.get(d), StandardCharsets.UTF_8);
+        String yaml = FrontmatterHandler.extractFrontmatterYaml(text);
+        // Host metadata adapters insert their visibility flags next to a top-level block key.
+        if (!Pattern.compile("(?m)^user_invocable: *(true|false) *(#.*)?$").matcher(yaml).find()) {
+            String normalized = SkillPack.YAML.writeValueAsString(header) + "---\n"
+                                + FrontmatterHandler.extractBody(text);
+            resources.put(d, normalized.getBytes(StandardCharsets.UTF_8));
         }
     }
 

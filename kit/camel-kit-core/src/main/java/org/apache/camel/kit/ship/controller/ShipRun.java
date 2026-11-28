@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import org.apache.camel.kit.ship.ShipDigest;
 import org.apache.camel.kit.ship.context.ShipContext;
 import org.apache.camel.kit.ship.security.ShipTreePolicy;
+import org.apache.camel.kit.workflow.PipelineId;
 
 /** Compact authoritative state for one local Ship run. */
 public record ShipRun(
@@ -35,7 +36,6 @@ public record ShipRun(
     static final int MAX_MESSAGE_LENGTH = 1024;
 
     private static final Pattern RUN_ID = Pattern.compile("ship-[0-9a-f]{32}");
-    private static final Pattern PIPELINE_ID = Pattern.compile("[0-9]{3,}-[a-z0-9]+(?:-[a-z0-9]+)*");
 
     /** Source-compatible constructor for the original Pi execution model. */
     public ShipRun(int schemaVersion, String id, String projectDirectory, String pipelineId,
@@ -55,7 +55,7 @@ public record ShipRun(
             throw new IllegalArgumentException("Ship run ID is invalid");
         }
         projectDirectory = normalizedAbsolutePath(projectDirectory, "project directory");
-        if (pipelineId != null && !isPipelineId(pipelineId)) {
+        if (pipelineId != null && !PipelineId.isValid(pipelineId)) {
             throw new IllegalArgumentException("Ship pipeline ID is invalid");
         }
         Objects.requireNonNull(oversight, "oversight");
@@ -101,10 +101,6 @@ public record ShipRun(
 
     public static boolean isRunId(String value) {
         return value != null && RUN_ID.matcher(value).matches();
-    }
-
-    public static boolean isPipelineId(String value) {
-        return value != null && PIPELINE_ID.matcher(value).matches();
     }
 
     public StageRecord stage(Stage stage) {

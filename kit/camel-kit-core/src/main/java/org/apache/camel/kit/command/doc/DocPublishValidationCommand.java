@@ -3,6 +3,7 @@ package org.apache.camel.kit.command.doc;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -13,8 +14,8 @@ import org.apache.camel.kit.command.CliCommand;
 import org.apache.camel.kit.command.KitOptionParser;
 import org.apache.camel.kit.command.PathConverter;
 import org.apache.camel.kit.doc.DocumentationEvidence;
-import org.apache.camel.kit.ship.controller.ShipRun;
 import org.apache.camel.kit.util.AtomicFileWriter;
+import org.apache.camel.kit.workflow.PipelineId;
 
 import org.aesh.command.CommandDefinition;
 import org.aesh.command.option.Option;
@@ -46,7 +47,7 @@ public class DocPublishValidationCommand extends CliCommand {
             }
             Path destination;
             if (pipeline != null) {
-                if (!ShipRun.isPipelineId(pipeline)) {
+                if (!PipelineId.isValid(pipeline)) {
                     throw new IOException("Invalid manual pipeline ID: " + pipeline);
                 }
                 destination = DocumentationEvidence.resolve(project,
@@ -76,6 +77,9 @@ public class DocPublishValidationCommand extends CliCommand {
             }
             out.println(root.relativize(destination));
             return 0;
+        } catch (NoSuchFileException e) {
+            err.println("Validation path does not exist: " + e.getFile());
+            return 1;
         } catch (IOException e) {
             err.println(e.getMessage());
             return 1;

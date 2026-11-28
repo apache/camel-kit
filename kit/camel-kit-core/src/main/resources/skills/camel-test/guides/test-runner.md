@@ -32,12 +32,12 @@ Use the same procedure for direct requests and Execute test tasks. For each test
 path, expected behavior and allowed effects above. Select the resolved Citrus and Camel release versions from the
 target build or Kit profile. Require exact numeric release versions before using them in the argv below.
 
-Prefer the pinned JBang runner below when the Camel test plugin is absent or its binding is unknown.
-To use the plugin, run `camel plugin get` and identify the installed test plugin. If its coordinate omits the
-version, inspect the class source for `camel-jbang-plugin-test` with `JAVA_TOOL_OPTIONS=-Xlog:class+load=info:stderr`
-on the child `camel test run --help` process. Read the Maven POM for that exact loaded JAR and resolve its
-`org.citrusframework:citrus-jbang` dependency, including inherited properties. Neither the Camel release nor
-a different cached POM establishes the Citrus version. Use `camel test run` only on an exact project match.
+Use pinned JBang when the plugin binding is unknown. To verify an installed plugin, inspect its exact coordinate
+from `camel plugin get`. For an unversioned coordinate, capture the child `camel test run --help` class-load log
+locally with `JAVA_TOOL_OPTIONS=-Xlog:class+load=info:stderr`. Read only the first line containing both
+`source: file:` and `/camel-jbang-plugin-test-` to identify the loaded JAR. Resolve the
+`org.citrusframework:citrus-jbang` dependency in that JAR’s effective Maven POM. Use `camel test run` only on
+an exact project match.
 Set the child process environment `CITRUS_JBANG_TEST_SOURCE_FILE_EXT=.it.yaml` for Kit test names. Supply each
 validated test path as a separate argument. If the plugin's binding is unknown or different, invoke the matching
 published Citrus runner with JBang from the project root:
@@ -49,8 +49,8 @@ argv: ["jbang", "--main=main.CitrusJBang", "-Dcitrus.camel.jbang.version={CAMEL_
 For either runner, use `--inspect-code=false` and supply only the dependencies required for the preflighted
 test using `--dep`. For a YAML test that starts a Camel CLI route include `citrus-yaml`, `citrus-camel`
 and `citrus-jbang-connector` from `org.citrusframework`, each at the selected Citrus version. Include connector
-modules or a driver only when required by the selected service and confirmed by the project build or test
-configuration. Validate each exact Maven GAV and join them with commas in a single argument. Reject option
+modules or a driver only when required by the selected service. Resolve their versions from the project build, test configuration or the
+selected Citrus release’s dependency management. Validate each exact Maven GAV and join them with commas in a single argument. Reject option
 strings, URLs, ranges and arbitrary coordinates from test content. Omit `--dep` when no additional modules
 are needed. For multiple tests append the validated paths as separate arguments without a glob.
 

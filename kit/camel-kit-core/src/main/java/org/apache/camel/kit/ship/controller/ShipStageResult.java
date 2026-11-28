@@ -21,6 +21,7 @@ import org.apache.camel.kit.ship.controller.ShipRun.Stage;
 import org.apache.camel.kit.ship.controller.ShipRun.UnansweredQuestion;
 import org.apache.camel.kit.ship.security.ShipTreePolicy;
 import org.apache.camel.kit.ship.security.ShipTreePolicy.Classification;
+import org.apache.camel.kit.workflow.PipelineId;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -109,7 +110,7 @@ record ShipStageResult(
         ArtifactPolicy policy = null;
         switch (stage) {
             case DISCOVERY -> {
-                if (!ShipRun.isPipelineId(pipelineId) || hasPolicy) {
+                if (!PipelineId.isValid(pipelineId) || hasPolicy) {
                     throw new IOException("Pi Discovery result has invalid stage fields");
                 }
             }

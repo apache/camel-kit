@@ -70,8 +70,7 @@ Resolve `TEST_DIR` as the optional `[MODULE_DIR]` prefix plus `src/test/resource
 - [ ] For Main, add test dependencies to `{TEST_DIR}jbang.properties`; do not create a `pom.xml`
 - [ ] For Spring Boot/Quarkus, add test dependencies to `[MODULE_DIR]pom.xml` if not present:
   - `org.citrusframework:citrus-*`
-  - `org.testcontainers:testcontainers`
-  - `org.testcontainers:[module]` for each required containerized database/broker
+  - `org.citrusframework:citrus-testcontainers` for container actions
 - [ ] Verify: the runner selected by `camel-test/guides/test-runner.md` runs `[MODULE_DIR]src/test/resources/[flow-name].camel.it.yaml` and exits 0 with a passing test
   summary; omit the entire `[MODULE_DIR]` prefix at the project root
 
@@ -106,15 +105,10 @@ For Spring Boot and Quarkus projects, add standard test dependencies to `pom.xml
     <scope>test</scope>
 </dependency>
 
-<!-- Testcontainers -->
+<!-- Only for tests that use container actions -->
 <dependency>
-    <groupId>org.testcontainers</groupId>
-    <artifactId>testcontainers</artifactId>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.testcontainers</groupId>
-    <artifactId>junit-jupiter</artifactId>
+    <groupId>org.citrusframework</groupId>
+    <artifactId>citrus-testcontainers</artifactId>
     <scope>test</scope>
 </dependency>
 ```
@@ -122,8 +116,4 @@ For Spring Boot and Quarkus projects, add standard test dependencies to `pom.xml
 For Main projects, declare the required artifacts through `run.deps` in `{TEST_DIR}jbang.properties` as described in
 `camel-test/guides/test-generation.md`; do not create a `pom.xml`.
 
-Add module-specific Testcontainers dependencies based on external services:
-- PostgreSQL: `org.testcontainers:postgresql`
-- Kafka: `org.testcontainers:kafka`
-- MongoDB: `org.testcontainers:mongodb`
-- etc.
+Select the connectors and drivers used by the test as described in `camel-test/guides/test-generation.md`.
